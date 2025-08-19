@@ -1,0 +1,14 @@
+{
+  "name": "toxic-lover-bot",
+  "version": "1.0.0",
+  "description": "Facebook Messenger bot named Toxic Lover 💕 powered by GPT and Rodgers.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  }
+}
