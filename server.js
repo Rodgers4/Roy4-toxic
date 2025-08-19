@@ -63,7 +63,7 @@ app.post("/webhook", async (req, res) => {
 // ✅ Function: Ask Keith GPT4 API
 async function askKeithGPT(message) {
   try {
-    const response = await fetch("https://apis-keith.vercel.app/gpt4", {
+    const response = await fetch("https://apis-keith.vercel.app/gpt4/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),
