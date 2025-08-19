@@ -43,8 +43,8 @@ app.post("/webhook", async (req, res) => {
         if (userMessage.includes("who is your owner")) {
           reply = "💙 𝗦𝗜𝗥 𝗥𝗢𝗗𝗚𝗘𝗥𝗦 💙";
         } else {
-          // 🚀 Otherwise, send to Keith GPT4
-          reply = await askKeithGPT(userMessage);
+          // 🚀 Otherwise, send to PrinceTech AI
+          reply = await askPrinceAI(userMessage);
         }
 
         // 🔥 Always add modern footer
@@ -60,27 +60,25 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// ✅ Function: Ask Keith GPT4 API
-async function askKeithGPT(message) {
+// ✅ Function: Ask PrinceTech AI API
+async function askPrinceAI(message) {
   try {
-    const response = await fetch("https://apis-keith.vercel.app/gpt4/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-    });
-
+    const url = `https://api.princetechn.com/api/ai/ai?apikey=prince&q=${encodeURIComponent(
+      message
+    )}`;
+    const response = await fetch(url);
     const text = await response.text();
-    console.log("Keith GPT4 raw response:", text);
+    console.log("PrinceTech raw response:", text);
 
     try {
       const data = JSON.parse(text);
-      return data.reply || "💙 𝗧𝗼𝘅𝗶𝗰 𝗟𝗼𝘃𝗲𝗿 💙 (no reply received)";
+      return data.response || "💙 𝗧𝗼𝘅𝗶𝗰 𝗟𝗼𝘃𝗲𝗿 💙 (no reply received)";
     } catch (e) {
-      return "💙 𝗧𝗼𝘅𝗶𝗰 𝗟𝗼𝘃𝗲𝗿 💙 (invalid response)";
+      return text || "💙 𝗧𝗼𝘅𝗶𝗰 𝗟𝗼𝘃𝗲𝗿 💙 (invalid response)";
     }
   } catch (error) {
-    console.error("Keith GPT4 API error:", error);
-    return "💙 𝗧𝗼𝘅𝗶𝗰 𝗟𝗼𝘃𝗲𝗿 💙 (can’t reach GPT4 😅)";
+    console.error("PrinceTech API error:", error);
+    return "💙 𝗧𝗼𝘅𝗶𝗰 𝗟𝗼𝘃𝗲𝗿 💙 (can’t reach AI 😅)";
   }
 }
 
@@ -102,5 +100,5 @@ function callSendAPI(senderPsid, response) {
 }
 
 app.listen(PORT, () =>
-  console.log(`🔥 Toxic Lover running with Keith GPT4 on port ${PORT}`)
+  console.log(`🔥 Toxic Lover running with PrinceTech AI on port ${PORT}`)
 );
