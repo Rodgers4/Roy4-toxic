@@ -5,73 +5,19 @@ import fetch from "node-fetch";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Messenger tokens
 const VERIFY_TOKEN = "Rodgers4";
-const PAGE_ACCESS_TOKEN = "EAAU7cBW7QjkBPOAa7cUMw5ZALBeqNfjYhpyxm86o0yRR7n7835SIv5YHVxsyKozKgZAltZCo0GiPK4ZBrIMX2Ym7PTHtdfrf25xDnp4S2PogGVnDxBftFunycaHgsmvtmrV90sEHHNNgmn4oxa4pI27ThWZBdvosEqGokHs1ZCDXZAduFVF9aQ01m2wgZAZBZC01KB0CYeOZAHc5wZDZD";
+const PAGE_ACCESS_TOKEN =
+  "EAAU7cBW7QjkBPOAa7cUMw5ZALBeqNfjYhpyxm86o0yRR7n7835SIv5YHVxsyKozKgZAltZCo0GiPK4ZBrIMX2Ym7PTHtdfrf25xDnp4S2PogGVnDxBftFunycaHgsmvtmrV90sEHHNNgmn4oxa4pI27ThWZBdvosEqGokHs1ZCDXZAduFVF9aQ01m2wgZAZBZC01KB0CYeOZAHc5wZDZD";
 
-// Convert normal text → Fancy bold font
-function toFancy(text) {
-  const normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const fancy =
-    "𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙" +
-    "𝐚𝐛𝐜𝐝𝐞𝐟𝐠𝐡𝐢𝐣𝐤𝐥𝐦𝐧𝐨𝐩𝐪𝐫𝐬𝐭𝐮𝐯𝐰𝐱𝐲𝐳" +
-    "𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗";
+app.use(bodyParser.json());
 
-  return text
-    .split("")
-    .map((ch) => {
-      const i = normal.indexOf(ch);
-      return i > -1 ? fancy[i] : ch;
-    })
-    .join("");
-}
-
-// 🎯 Command List
-const commandMenu = toFancy(`
-╔═══ 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 ═══╗
-
-📚 𝐄𝐃𝐔𝐂𝐀𝐓𝐈𝐎𝐍
-• fruitinfo [q]
-• poem
-• maths [q]
-• mathlist
-• dict [w]
-• booksearch [q]
-• bookid [id]
-
-🌍 𝐒𝐄𝐀𝐑𝐂𝐇
-• yt [q]
-• img [q]
-• bing [q]
-• bible [v]
-• tiktoktrend
-• lyrics [s]
-• chord [s]
-• ig [url]
-• tiktok [url]
-• spotify [s]
-• apkfab [a]
-• sticker [q]
-
-🤖 𝐀𝐈 𝐇𝐔𝐁
-• gpt [q]
-• claude [q]
-• mistral [q]
-• gemini [q]
-• o3 [q]
-• deepseek [q]
-
-╚═ 𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 ═╝
-
-💡 Start with command name + query
-   Example: yt love songs
-   Example: gpt hello world
-`);
-
-// ✅ Verify webhook
+// ✅ Verify Webhook
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
+
   if (mode && token === VERIFY_TOKEN) {
     res.status(200).send(challenge);
   } else {
@@ -79,118 +25,141 @@ app.get("/webhook", (req, res) => {
   }
 });
 
-// ✅ Messenger webhook
+// ✅ Handle Messages
 app.post("/webhook", async (req, res) => {
-  const body = req.body;
-  if (body.object === "page") {
-    body.entry.forEach(async (entry) => {
+  if (req.body.object === "page") {
+    for (const entry of req.body.entry) {
       const event = entry.messaging[0];
       const senderId = event.sender.id;
 
       if (event.message && event.message.text) {
         const userMessage = event.message.text.trim();
-        const args = userMessage.split(" ");
-        const cmd = args[0].toLowerCase();
-        const query = args.slice(1).join(" ");
+        console.log(`📩 User: ${userMessage}`);
 
         let reply;
 
-        // 📜 HELP
-        if (cmd === "help") {
-          reply = commandMenu;
-
-        // 📚 EDUCATION
-        } else if (cmd === "poem") {
-          reply = await fetchAPI("https://apis-keith.vercel.app/education/poem/random");
-        } else if (cmd === "fruitinfo") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/education/fruit?q=${query}`);
-        } else if (cmd === "dict") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/education/dict?q=${query}`);
-        } else if (cmd === "mathlist") {
-          reply = await fetchAPI("https://apis-keith.vercel.app/education/maths/list");
-        } else if (cmd === "maths") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/education/maths?q=${query}`);
-        } else if (cmd === "booksearch") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/education/book/search?q=${query}`);
-        } else if (cmd === "bookid") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/education/book/id?id=${query}`);
-
-        // 🌍 SEARCH
-        } else if (cmd === "yt") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/youtube?q=${query}`);
-        } else if (cmd === "img") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/img?q=${query}`);
-        } else if (cmd === "bing") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/bing?q=${query}`);
-        } else if (cmd === "bible") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/bible?q=${query}`);
-        } else if (cmd === "tiktoktrend") {
-          reply = await fetchAPI("https://apis-keith.vercel.app/search/tiktoktrend");
-        } else if (cmd === "lyrics") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/lyrics?q=${query}`);
-        } else if (cmd === "chord") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/chord?q=${query}`);
-        } else if (cmd === "tiktok") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/tiktok?url=${query}`);
-        } else if (cmd === "ig") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/ig?url=${query}`);
-        } else if (cmd === "spotify") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/spotify?q=${query}`);
-        } else if (cmd === "apkfab") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/apkfab?q=${query}`);
-        } else if (cmd === "sticker") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/search/sticker?q=${query}`);
-
-        // 🤖 AI HUB
-        } else if (cmd === "gpt") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/ai/gpt?q=${query}`);
-        } else if (cmd === "claude") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/ai/claude?q=${query}`);
-        } else if (cmd === "mistral") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/ai/mistral?q=${query}`);
-        } else if (cmd === "gemini") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/ai/gemini?q=${query}`);
-        } else if (cmd === "o3") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/ai/o3?q=${query}`);
-        } else if (cmd === "deepseek") {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/ai/deepseek?q=${query}`);
-
-        // 👑 PRINCE GPT (default for normal chat)
+        if (userMessage.toLowerCase() === "help") {
+          reply = getCommandList();
         } else {
-          reply = await fetchAPI(`https://apis-keith.vercel.app/ai/gpt?q=${encodeURIComponent(userMessage)}`);
+          reply = await handleCommand(userMessage);
         }
 
-        callSendAPI(senderId, toFancy(reply));
+        // ✨ Always styled
+        const styledReply = `𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑\n\n${reply}\n\n➤ 𝑻𝒚𝒑𝒆 𝐇𝐞𝐥𝐩 𝒕𝒐 𝒔𝒆𝒆 𝒂𝒗𝒂𝒊𝒍𝒂𝒃𝒍𝐞 𝒄𝒐𝒎𝒎𝒂𝒏𝐝𝐬.`;
+
+        callSendAPI(senderId, styledReply);
       }
-    });
-    res.status(200).send("EVENT_RECEIVED");
+    }
+    res.sendStatus(200);
   } else {
     res.sendStatus(404);
   }
 });
 
-// ✅ Fetch wrapper (strip HTML if needed)
-async function fetchAPI(url) {
-  try {
-    const res = await fetch(url);
-    let text = await res.text();
-    return text.replace(/<[^>]*>?/gm, ""); // strip HTML tags
-  } catch {
-    return "⚠️ API error";
+// ✅ Command Router
+async function handleCommand(message) {
+  const [cmd, ...args] = message.split(" ");
+  const query = args.join(" ");
+
+  const endpoints = {
+    gpt: `/ai/gpt?q=${query}`,
+    claude: `/ai/claude?q=${query}`,
+    mistral: `/ai/mistral?q=${query}`,
+    gemini: `/ai/gemini?q=${query}`,
+    deepseek: `/ai/deepseek?q=${query}`,
+    poem: `/education/poem/random`,
+    maths: `/education/maths?q=${query}`,
+    mathlist: `/education/maths/list`,
+    dict: `/education/dictionary?q=${query}`,
+    fruitinfo: `/education/fruitinfo?q=${query}`,
+    booksearch: `/education/booksearch?q=${query}`,
+    bookid: `/education/book?id=${query}`,
+    yt: `/search/yt?q=${query}`,
+    img: `/search/img?q=${query}`,
+    bing: `/search/bing?q=${query}`,
+    bible: `/education/bible?q=${query}`,
+    lyrics: `/search/lyrics?q=${query}`,
+    ig: `/search/ig?q=${query}`,
+    spotify: `/search/spotify?q=${query}`,
+    apkfab: `/search/apkfab?q=${query}`,
+    tiktoktrend: `/search/tiktok/trend`,
+  };
+
+  if (endpoints[cmd]) {
+    return await fetchFromAPI(endpoints[cmd], cmd);
+  } else {
+    // default → GPT answers any free text
+    return await fetchFromAPI(`/ai/gpt?q=${encodeURIComponent(message)}`, "gpt");
   }
 }
 
-// ✅ Send to Messenger
-function callSendAPI(senderId, text) {
-  const body = {
-    recipient: { id: senderId },
-    message: { text },
-  };
-  fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }).catch((e) => console.error("Send API error:", e));
+// ✅ Generic API fetch
+async function fetchFromAPI(path, label) {
+  try {
+    const url = `https://apis-keith.vercel.app${path}`;
+    const res = await fetch(url);
+    const text = await res.text();
+    return `𝐑𝐞𝐬𝐮𝐥𝐭 [${label.toUpperCase()}] ➤ ${text}`;
+  } catch (err) {
+    console.error(`❌ ${label} error:`, err);
+    return `⚠️ 𝐄𝐫𝐫𝐨𝐫 𝐟𝐞𝐭𝐜𝐡𝐢𝐧𝐠 ${label}`;
+  }
 }
 
-app.listen(PORT, () => console.log(`🔥 Toxic Lover running on ${PORT}`));
+// ✅ Command List
+function getCommandList() {
+  return `
+╔═ 𝐂𝐎𝐌𝐌𝐀𝐍𝐃 𝐋𝐈𝐒𝐓 ═╗
+
+📚 𝐄𝐃𝐔𝐂𝐀𝐓𝐈𝐎𝐍
+• fruitinfo [mango]
+• poem
+• mathlist
+• maths [2+2]
+• dict [love]
+• booksearch [history]
+• bookid [id]
+
+🌍 𝐒𝐄𝐀𝐑𝐂𝐇
+• yt [song]
+• img [cats]
+• bing [kenya]
+• bible [John 3:16]
+• tiktoktrend
+• lyrics [hello]
+• ig [user]
+• spotify [song]
+• apkfab [app]
+
+🤖 𝐀𝐈 𝐇𝐔𝐁
+• gpt [hi]
+• claude [hi]
+• mistral [hi]
+• gemini [hi]
+• deepseek [hi]
+
+📌 𝐔𝐬𝐞: Type command + query
+   𝐄.𝐠. ➤ gpt Hello
+`;
+}
+
+// ✅ Send reply
+function callSendAPI(senderPsid, response) {
+  const body = {
+    recipient: { id: senderPsid },
+    message: { text: response },
+  };
+
+  fetch(
+    `https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  ).catch((err) => console.error("Unable to send:", err));
+}
+
+app.listen(PORT, () =>
+  console.log(`🔥 Toxic Lover running with ALL commands on port ${PORT}`)
+);
