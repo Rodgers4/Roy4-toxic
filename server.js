@@ -38,14 +38,20 @@ app.post("/webhook", async (req, res) => {
 
         let reply;
 
-        if (userMessage.toLowerCase() === "help") {
-          reply = getCommandList();
+        // 🏷 Custom identity replies
+        if (userMessage.toLowerCase().includes("what is your name")) {
+          reply = "🤍 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 created by 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 🤍";
+        } else if (userMessage.toLowerCase().includes("who is your owner")) {
+          reply = "💙 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 💙";
         } else {
-          reply = await handleCommand(userMessage);
+          // Default → Prince GPT
+          reply = await askPrinceAI(userMessage);
         }
 
-        // ✨ Always styled
-        const styledReply = `𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑\n\n${reply}\n\n➤ 𝑻𝒚𝒑𝒆 𝐇𝐞𝐥𝐩 𝒕𝒐 𝒔𝒆𝒆 𝒂𝒗𝒂𝒊𝒍𝒂𝒃𝒍𝐞 𝒄𝒐𝒎𝒎𝒂𝒏𝐝𝐬.`;
+        // 🎨 Styled response with footer
+        const styledReply = `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒`;
+
+        console.log(`🤖 Toxic Lover reply: ${styledReply}`);
 
         callSendAPI(senderId, styledReply);
       }
@@ -56,96 +62,38 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// ✅ Command Router
-async function handleCommand(message) {
-  const [cmd, ...args] = message.split(" ");
-  const query = args.join(" ");
-
-  const endpoints = {
-    gpt: `/ai/gpt?q=${query}`,
-    claude: `/ai/claude?q=${query}`,
-    mistral: `/ai/mistral?q=${query}`,
-    gemini: `/ai/gemini?q=${query}`,
-    deepseek: `/ai/deepseek?q=${query}`,
-    poem: `/education/poem/random`,
-    maths: `/education/maths?q=${query}`,
-    mathlist: `/education/maths/list`,
-    dict: `/education/dictionary?q=${query}`,
-    fruitinfo: `/education/fruitinfo?q=${query}`,
-    booksearch: `/education/booksearch?q=${query}`,
-    bookid: `/education/book?id=${query}`,
-    yt: `/search/yt?q=${query}`,
-    img: `/search/img?q=${query}`,
-    bing: `/search/bing?q=${query}`,
-    bible: `/education/bible?q=${query}`,
-    lyrics: `/search/lyrics?q=${query}`,
-    ig: `/search/ig?q=${query}`,
-    spotify: `/search/spotify?q=${query}`,
-    apkfab: `/search/apkfab?q=${query}`,
-    tiktoktrend: `/search/tiktok/trend`,
-  };
-
-  if (endpoints[cmd]) {
-    return await fetchFromAPI(endpoints[cmd], cmd);
-  } else {
-    // default → GPT answers any free text
-    return await fetchFromAPI(`/ai/gpt?q=${encodeURIComponent(message)}`, "gpt");
-  }
-}
-
-// ✅ Generic API fetch
-async function fetchFromAPI(path, label) {
+// ✅ Function: Ask Prince GPT API
+async function askPrinceAI(message) {
   try {
-    const url = `https://apis-keith.vercel.app${path}`;
-    const res = await fetch(url);
-    const text = await res.text();
-    return `𝐑𝐞𝐬𝐮𝐥𝐭 [${label.toUpperCase()}] ➤ ${text}`;
-  } catch (err) {
-    console.error(`❌ ${label} error:`, err);
-    return `⚠️ 𝐄𝐫𝐫𝐨𝐫 𝐟𝐞𝐭𝐜𝐡𝐢𝐧𝐠 ${label}`;
+    const url = `https://api.princetechn.com/api/ai/ai?apikey=prince&q=${encodeURIComponent(
+      message
+    )}`;
+    const response = await fetch(url);
+    const text = await response.text();
+    console.log("🌐 PrinceTech raw response:", text);
+
+    try {
+      const data = JSON.parse(text);
+
+      return (
+        data.response ||
+        data.result ||
+        data.answer ||
+        JSON.stringify(data) ||
+        "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 (empty reply)"
+      );
+    } catch (e) {
+      return text || "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 (invalid response)";
+    }
+  } catch (error) {
+    console.error("❌ PrinceTech API error:", error);
+    return "⚠️ 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 (can’t reach AI)";
   }
 }
 
-// ✅ Command List
-function getCommandList() {
-  return `
-╔═ 𝐂𝐎𝐌𝐌𝐀𝐍𝐃 𝐋𝐈𝐒𝐓 ═╗
-
-📚 𝐄𝐃𝐔𝐂𝐀𝐓𝐈𝐎𝐍
-• fruitinfo [mango]
-• poem
-• mathlist
-• maths [2+2]
-• dict [love]
-• booksearch [history]
-• bookid [id]
-
-🌍 𝐒𝐄𝐀𝐑𝐂𝐇
-• yt [song]
-• img [cats]
-• bing [kenya]
-• bible [John 3:16]
-• tiktoktrend
-• lyrics [hello]
-• ig [user]
-• spotify [song]
-• apkfab [app]
-
-🤖 𝐀𝐈 𝐇𝐔𝐁
-• gpt [hi]
-• claude [hi]
-• mistral [hi]
-• gemini [hi]
-• deepseek [hi]
-
-📌 𝐔𝐬𝐞: Type command + query
-   𝐄.𝐠. ➤ gpt Hello
-`;
-}
-
-// ✅ Send reply
+// ✅ Function: Send message back to Messenger
 function callSendAPI(senderPsid, response) {
-  const body = {
+  const requestBody = {
     recipient: { id: senderPsid },
     message: { text: response },
   };
@@ -155,11 +103,11 @@ function callSendAPI(senderPsid, response) {
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestBody),
     }
   ).catch((err) => console.error("Unable to send:", err));
 }
 
 app.listen(PORT, () =>
-  console.log(`🔥 Toxic Lover running with ALL commands on port ${PORT}`)
+  console.log(`🔥 Toxic Lover running with Prince GPT on port ${PORT}`)
 );
