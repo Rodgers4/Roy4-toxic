@@ -68,7 +68,7 @@ app.post("/webhook", async (req, res) => {
         // 🎨 Styled GPT replies always end with Powered by Rodgers
         const styledReply = reply.includes("💌") || reply.includes("💡") || reply.includes("💭")
           ? reply
-          : `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 Roy4`;
+          : `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
 
         console.log(`🤖 Toxic Lover reply: ${styledReply}`);
 
