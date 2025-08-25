@@ -36,66 +36,63 @@ app.post("/webhook", async (req, res) => {
         console.log(`📩 User: ${userMessage}`);
 
         let reply;
+        let imageUrl = null;
 
-        // ✅ Commands
+        // ✅ Lyrics
         if (/^lyrics/i.test(userMessage)) {
           const query = userMessage.replace(/^lyrics/i, "").trim();
-          reply = await fetchAPI(`https://api.princetechn.com/api/search/lyrics?apikey=prince&query=${encodeURIComponent(query)}`, "🎵 Lyrics");
-        } 
+          const result = await getLyrics(query);
+          reply = result.text;
+          imageUrl = result.image;
+        }
+        // ✅ Wiki
         else if (/^who is/i.test(userMessage)) {
           const query = userMessage.replace(/^who is/i, "").trim();
-          reply = await fetchAPI(`https://api.princetechn.com/api/search/wikimedia?apikey=prince&title=${encodeURIComponent(query)}`, "📖 Wiki");
-        } 
+          const result = await getWiki(query);
+          reply = result.text;
+          imageUrl = result.image;
+        }
+        // ✅ Pickup
         else if (/^pickup/i.test(userMessage)) {
-          reply = await fetchAPI("https://api.princetechn.com/api/fun/pickupline?apikey=prince", "💌 Pickup");
+          reply = await getPlain("https://api.princetechn.com/api/fun/pickupline?apikey=prince", "💌 Pickup");
         }
+        // ✅ Quote
         else if (/^quote/i.test(userMessage)) {
-          reply = await fetchAPI("https://api.princetechn.com/api/fun/quotes?apikey=prince", "💡 Quote");
+          reply = await getPlain("https://api.princetechn.com/api/fun/quotes?apikey=prince", "💡 Quote");
         }
+        // ✅ Joke
         else if (/^joke/i.test(userMessage)) {
-          reply = await fetchAPI("https://api.princetechn.com/api/fun/jokes?apikey=prince", "😂 Joke");
+          reply = await getPlain("https://api.princetechn.com/api/fun/jokes?apikey=prince", "😂 Joke");
         }
+        // ✅ Fact
         else if (/^fact/i.test(userMessage)) {
-          reply = await fetchAPI("https://api.princetechn.com/api/fun/fact?apikey=prince", "📌 Fact");
+          reply = await getPlain("https://api.princetechn.com/api/fun/fact?apikey=prince", "📌 Fact");
         }
+        // ✅ Advice
         else if (/^advice/i.test(userMessage)) {
-          reply = await fetchAPI("https://api.princetechn.com/api/fun/advice?apikey=prince", "💭 Advice");
+          reply = await getPlain("https://api.princetechn.com/api/fun/advice?apikey=prince", "💭 Advice");
         }
+        // ✅ Horoscope
         else if (/^horoscope/i.test(userMessage)) {
           const sign = userMessage.replace(/^horoscope/i, "").trim();
-          reply = await fetchAPI(`https://api.princetechn.com/api/fun/horoscope?apikey=prince&sign=${encodeURIComponent(sign)}`, "🔮 Horoscope");
+          reply = await getPlain(`https://api.princetechn.com/api/fun/horoscope?apikey=prince&sign=${encodeURIComponent(sign)}`, "🔮 Horoscope");
         }
-        else if (/^instagram/i.test(userMessage)) {
-          const url = userMessage.replace(/^instagram/i, "").trim();
-          reply = await fetchAPI(`https://api.princetechn.com/api/download/igdl?apikey=prince&url=${encodeURIComponent(url)}`, "📸 Instagram");
-        }
-        else if (/^tiktok/i.test(userMessage)) {
-          const url = userMessage.replace(/^tiktok/i, "").trim();
-          reply = await fetchAPI(`https://api.princetechn.com/api/download/tiktok?apikey=prince&url=${encodeURIComponent(url)}`, "🎵 TikTok");
-        }
-        else if (/^facebook/i.test(userMessage)) {
-          const url = userMessage.replace(/^facebook/i, "").trim();
-          reply = await fetchAPI(`https://api.princetechn.com/api/download/fb?apikey=prince&url=${encodeURIComponent(url)}`, "📘 Facebook");
-        }
-        else if (/^download/i.test(userMessage)) {
-          const url = userMessage.replace(/^download/i, "").trim();
-          reply = await fetchAPI(`https://api.princetechn.com/api/download/mp3?apikey=prince&url=${encodeURIComponent(url)}`, "🎶 YouTube");
-        }
-        else if (/^removebg/i.test(userMessage)) {
-          const url = userMessage.replace(/^removebg/i, "").trim();
-          reply = await fetchAPI(`https://api.princetechn.com/api/tools/removebg?apikey=prince&url=${encodeURIComponent(url)}`, "🖼 RemoveBG");
-        }
+        // ✅ Menu
         else if (/^menu/i.test(userMessage)) {
           reply = menuMessage();
         }
+        // ✅ GPT fallback
         else {
-          // ✅ GPT fallback
           reply = await askPrinceAI(userMessage);
-          reply = `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 Roy4`;
+          reply = `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝗣𝗼𝘄𝗲𝗿𝗲𝗱 𝗯𝘆 Roy4`;
         }
 
-        // ✅ Send back reply
-        callSendAPI(senderId, reply);
+        // ✅ Send response
+        if (imageUrl) {
+          sendImageWithCaption(senderId, imageUrl, reply);
+        } else {
+          callSendAPI(senderId, reply);
+        }
       }
     }
     res.sendStatus(200);
@@ -104,30 +101,76 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// ✅ Fetch helper
-async function fetchAPI(url, label) {
+// ===================
+// COMMAND HANDLERS
+// ===================
+
+// 🎵 Lyrics
+async function getLyrics(song) {
+  try {
+    const url = `https://api.princetechn.com/api/search/lyrics?apikey=prince&query=${encodeURIComponent(song)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data && data.result) {
+      const { title, artist, lyrics, image } = data.result;
+      return {
+        text: `🎵 ${title}\n👤 ${artist}\n\n${lyrics}\n\n━━━━━━━━━━━━━━━\n𝗣𝗼𝘄𝗲𝗿𝗲𝗱 𝗯𝘆 𝗦𝗶𝗿 𝗥𝗼𝗱𝗴𝗲𝗿𝘀`,
+        image: image || null,
+      };
+    } else {
+      return { text: "⚠️ No lyrics found.", image: null };
+    }
+  } catch {
+    return { text: "⚠️ Lyrics fetch failed.", image: null };
+  }
+}
+
+// 📖 Wiki
+async function getWiki(name) {
+  try {
+    const url = `https://api.princetechn.com/api/search/wikimedia?apikey=prince&title=${encodeURIComponent(name)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data && data.result) {
+      const { title, description, image } = data.result;
+      return {
+        text: `📖 ${title}\n\n${description}\n\n━━━━━━━━━━━━━━━\n𝗣𝗼𝘄𝗲𝗿𝗲𝗱 𝗯𝘆 𝗦𝗶𝗿 𝗥𝗼𝗱𝗴𝗲𝗿𝘀`,
+        image: image || null,
+      };
+    } else {
+      return { text: "⚠️ No wiki info found.", image: null };
+    }
+  } catch {
+    return { text: "⚠️ Wiki fetch failed.", image: null };
+  }
+}
+
+// Plain text APIs
+async function getPlain(url, label) {
   try {
     const res = await fetch(url);
     const data = await res.json();
-    return `${label}: ${data.result || data.response || JSON.stringify(data)}`;
-  } catch (err) {
+    return `${label}: ${data.result || data.response || data.joke || data.quote || JSON.stringify(data)}`;
+  } catch {
     return `⚠️ Failed to fetch ${label}`;
   }
 }
 
-// ✅ Prince GPT
+// 🤖 Prince GPT
 async function askPrinceAI(message) {
   try {
     const url = `https://api.princetechn.com/api/ai/gpt?apikey=prince&q=${encodeURIComponent(message)}`;
     const response = await fetch(url);
     const data = await response.json();
     return data.response || data.answer || "⚠️ GPT gave no reply.";
-  } catch (err) {
+  } catch {
     return "⚠️ GPT API failed.";
   }
 }
 
-// ✅ Send Message
+// ✅ Messenger text reply
 function callSendAPI(senderPsid, response) {
   const requestBody = {
     recipient: { id: senderPsid },
@@ -141,7 +184,32 @@ function callSendAPI(senderPsid, response) {
   }).catch((err) => console.error("Unable to send:", err));
 }
 
-// ✅ Menu message
+// ✅ Messenger image + caption
+function sendImageWithCaption(senderPsid, imageUrl, caption) {
+  const requestBody = {
+    recipient: { id: senderPsid },
+    message: {
+      attachment: {
+        type: "image",
+        payload: { url: imageUrl, is_reusable: true },
+      },
+    },
+  };
+
+  // First send the image
+  fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody),
+  })
+    .then(() => {
+      // Then send the caption
+      callSendAPI(senderPsid, caption);
+    })
+    .catch((err) => console.error("Unable to send image:", err));
+}
+
+// 📌 Menu
 function menuMessage() {
   return `📌 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐌𝐄𝐍𝐔 📌
 
@@ -153,22 +221,17 @@ function menuMessage() {
 📌 Fact  
 💭 Advice  
 🔮 Horoscope <sign>  
-📸 Instagram <url>  
-🎵 TikTok <url>  
-📘 Facebook <url>  
-🎶 Download <yt_url>  
-🖼 Removebg <url>  
 
 ━━━━━━━━━━━━━━━  
 📝 𝐇𝐨𝐰 𝐓𝐨 𝐔𝐬𝐞:  
-- Type “Lyrics Dusuma” to get lyrics  
-- Type “Who is girlfriend of Rodgers” for wiki  
-- Type “Download https://youtu.be/xyz” for music  
+- "Lyrics Dusuma" → lyrics  
+- "Who is girlfriend of Rodgers" → wiki  
+- "Joke" → joke  
 
 ━━━━━━━━━━━━━━━  
 ⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒`;
 }
 
 app.listen(PORT, () =>
-  console.log(`🔥 Toxic Lover running with all commands on port ${PORT}`)
+  console.log(`🔥 Toxic Lover running with GPT + image captions on port ${PORT}`)
 );
