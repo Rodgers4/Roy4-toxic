@@ -12,7 +12,7 @@ const PAGE_ACCESS_TOKEN =
 
 app.use(bodyParser.json());
 
-// ✅ Verify Webhook
+/* ✅ Verify Webhook */
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
@@ -25,13 +25,21 @@ app.get("/webhook", (req, res) => {
   }
 });
 
-// ✅ Handle Messages
+/* ✅ Handle Messages & Postbacks */
 app.post("/webhook", async (req, res) => {
   if (req.body.object === "page") {
     for (const entry of req.body.entry) {
       const event = entry.messaging[0];
       const senderId = event.sender.id;
 
+      // 🟦 Handle Postback (Menu Button)
+      if (event.postback && event.postback.payload === "MENU_PAYLOAD") {
+        sendTyping(senderId);
+        const menuReply = getMenu();
+        callSendAPI(senderId, menuReply);
+      }
+
+      // 🟦 Handle Text Messages
       if (event.message && event.message.text) {
         const userMessage = event.message.text.trim();
         console.log(`📩 User: ${userMessage}`);
@@ -43,16 +51,19 @@ app.post("/webhook", async (req, res) => {
           reply = "🤍 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 created by 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 🤍";
         } else if (userMessage.toLowerCase().includes("who is your owner")) {
           reply = "💙 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 💙";
+        } else if (userMessage.toLowerCase() === "menu") {
+          reply = getMenu();
         } else {
           // Default → Prince GPT
           reply = await askPrinceAI(userMessage);
         }
 
         // 🎨 Styled response with footer
-        const styledReply = `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐑𝐎𝐘𝐓𝐄𝐂𝐇 𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐄𝐑𝐒`;
+        const styledReply = `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n💙 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 💙`;
 
         console.log(`🤖 Toxic Lover reply: ${styledReply}`);
 
+        sendTyping(senderId);
         callSendAPI(senderId, styledReply);
       }
     }
@@ -62,10 +73,40 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// ✅ Function: Ask Prince GPT API
+/* ✅ Function: Menu */
+function getMenu() {
+  return `💠 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐌𝐄𝐍𝐔 💠
+
+🎶 𝐋𝐲𝐫𝐢𝐜𝐬 <song>  
+📚 𝐖𝐢𝐤𝐢𝐦𝐞𝐝𝐢𝐚 <title>  
+🎵 𝐒𝐩𝐨𝐭𝐢𝐟𝐲 <song>  
+▶️ 𝐘𝐨𝐮𝐓𝐮𝐛𝐞 <query>  
+🎸 𝐂𝐡𝐨𝐫𝐝 <song>  
+☁️ 𝐖𝐞𝐚𝐭𝐡𝐞𝐫 <city>  
+📦 𝐍𝐏𝐌 <package>  
+📱 𝐏𝐥𝐚𝐲𝐬𝐭𝐨𝐫𝐞 <app>  
+🎮 𝐇𝐚𝐩𝐩𝐲𝐌𝐨𝐝 <app>  
+📥 𝐀𝐩𝐤𝐌𝐢𝐫𝐫𝐨𝐫 <app>  
+💟 𝐒𝐭𝐢𝐜𝐤𝐞𝐫𝐬 <query>  
+🖼 𝐆𝐨𝐨𝐠𝐥𝐞 <query>  
+🌆 𝐔𝐧𝐬𝐩𝐥𝐚𝐬𝐡 <query>  
+🎥 𝐓𝐢𝐤𝐓𝐨𝐤 <query>  
+🖼 𝐖𝐚𝐥𝐥𝐩𝐚𝐩𝐞𝐫𝐬 <query>  
+
+━━━━━━━━━━━━━━
+📌 𝐇𝐨𝐰 𝐭𝐨 𝐮𝐬𝐞:  
+➤ Type the command name followed by your search.  
+➤ Example: 𝐥𝐲𝐫𝐢𝐜𝐬 Dynasty Miaa  
+➤ Example: 𝐰𝐞𝐚𝐭𝐡𝐞𝐫 Kisumu  
+
+━━━━━━━━━━━━━━
+💙 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 💙`;
+}
+
+/* ✅ Function: Ask Prince GPT API */
 async function askPrinceAI(message) {
   try {
-    const url = `https://api.princetechn.com/api/ai/ai?apikey=prince&q=${encodeURIComponent(
+    const url = `https://api.princetechn.com/api/ai/gpt?apikey=prince&q=${encodeURIComponent(
       message
     )}`;
     const response = await fetch(url);
@@ -74,7 +115,6 @@ async function askPrinceAI(message) {
 
     try {
       const data = JSON.parse(text);
-
       return (
         data.response ||
         data.result ||
@@ -91,7 +131,24 @@ async function askPrinceAI(message) {
   }
 }
 
-// ✅ Function: Send message back to Messenger
+/* ✅ Function: Send Typing Simulation */
+function sendTyping(senderPsid) {
+  const requestBody = {
+    recipient: { id: senderPsid },
+    sender_action: "typing_on",
+  };
+
+  fetch(
+    `https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    }
+  ).catch((err) => console.error("Unable to send typing:", err));
+}
+
+/* ✅ Function: Send Message */
 function callSendAPI(senderPsid, response) {
   const requestBody = {
     recipient: { id: senderPsid },
@@ -108,6 +165,35 @@ function callSendAPI(senderPsid, response) {
   ).catch((err) => console.error("Unable to send:", err));
 }
 
-app.listen(PORT, () =>
-  console.log(`🔥 Toxic Lover running with Prince GPT on port ${PORT}`)
-);
+/* ✅ Set Persistent Menu on startup */
+async function setPersistentMenu() {
+  const url = `https://graph.facebook.com/v16.0/me/messenger_profile?access_token=${PAGE_ACCESS_TOKEN}`;
+  const body = {
+    persistent_menu: [
+      {
+        locale: "default",
+        composer_input_disabled: false,
+        call_to_actions: [
+          {
+            type: "postback",
+            title: "📜 Show Menu",
+            payload: "MENU_PAYLOAD",
+          },
+        ],
+      },
+    ],
+  };
+
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+    .then(() => console.log("✅ Persistent Menu set"))
+    .catch((err) => console.error("❌ Menu error:", err));
+}
+
+app.listen(PORT, () => {
+  console.log(`🔥 Toxic Lover running on port ${PORT}`);
+  setPersistentMenu();
+});
