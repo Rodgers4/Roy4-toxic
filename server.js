@@ -36,47 +36,50 @@ app.post("/webhook", async (req, res) => {
         const userMessage = event.message.text.trim();
         console.log(`📩 User: ${userMessage}`);
 
-        let reply;
+        let reply = "";
 
         // 🏷 Identity replies
-        if (userMessage.toLowerCase().includes("what is your name")) {
+        if (/what is your name/i.test(userMessage)) {
           reply = "🤍 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 created by 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 🤍";
-        } else if (userMessage.toLowerCase().includes("who is your owner")) {
+        } else if (/who is your owner/i.test(userMessage)) {
           reply = "💙 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 💙";
-        } 
+        }
         // 📝 Menu command
-        else if (userMessage.toLowerCase().includes("menu")) {
+        else if (/menu/i.test(userMessage)) {
           reply = commandMenu();
         }
         // 🎭 Advice
-        else if (/^advice/i.test(userMessage)) {
+        else if (/^advice$/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/advice?apikey=prince", "💭 Advice");
         }
         // 🎭 Pickupline
-        else if (/^pickupline/i.test(userMessage) || /^pickup/i.test(userMessage)) {
+        else if (/^pickupline$/i.test(userMessage) || /^pickup$/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/pickupline?apikey=prince", "💌 Pickupline");
         }
         // 🎭 Quote
-        else if (/^quote/i.test(userMessage)) {
+        else if (/^quote$/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/quotes?apikey=prince", "💡 Quote");
         }
-        // ⚽ Football matches today
-        else if (/^matches today$/i.test(userMessage) || /^football$/i.test(userMessage)) {
-          reply = await getFootballMatches();
+        // ⚽ Football
+        else if (/^football$/i.test(userMessage)) {
+          await getFootballMatches(senderId);
+          reply = "";
+        }
+        // 👘 Waifu
+        else if (/^waifu$/i.test(userMessage)) {
+          await getWaifu(senderId);
+          reply = "";
         }
         // 🧠 GPT fallback
         else {
           reply = await askPrinceAI(userMessage);
         }
 
-        // 🎨 Styled GPT replies always end with Powered by Rodgers
-        const styledReply = reply.includes("💌") || reply.includes("💡") || reply.includes("💭") || reply.includes("⚽")
-          ? reply
-          : `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐑𝐎𝐘-𝐓𝐄𝐂𝐇`;
-
-        console.log(`🤖 Toxic Lover reply: ${styledReply}`);
-
-        callSendAPI(senderId, styledReply);
+        if (reply) {
+          const styledReply = `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
+          console.log(`🤖 Toxic Lover reply: ${styledReply}`);
+          callSendAPI(senderId, styledReply);
+        }
       }
     }
     res.sendStatus(200);
@@ -95,13 +98,7 @@ async function askPrinceAI(message) {
 
     try {
       const data = JSON.parse(text);
-      return (
-        data.response ||
-        data.result ||
-        data.answer ||
-        JSON.stringify(data) ||
-        "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 (empty reply)"
-      );
+      return data.response || data.result || data.answer || JSON.stringify(data) || "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 (empty reply)";
     } catch {
       return text || "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 (invalid response)";
     }
@@ -122,21 +119,66 @@ async function getPlain(url, label) {
   }
 }
 
-// ✅ Football Matches
-async function getFootballMatches() {
+// ✅ Football Today - Send as Cards
+async function getFootballMatches(senderId) {
   try {
     const res = await fetch("https://api.princetechn.com/api/football/today-matches?apikey=prince");
     const data = await res.json();
-    if (Array.isArray(data.matches) && data.matches.length > 0) {
-      const list = data.matches
-        .map(m => `⚽ ${m.home} vs ${m.away} — ${m.time}`)
-        .join("\n");
-      return `🏟 Today’s Football Matches:\n\n${list}`;
+
+    if (!data.result || data.result.length === 0) {
+      await callSendAPI(senderId, "⚽ No football matches found for today.");
+      return;
     }
-    return "🏟 No football matches found for today.";
+
+    const elements = data.result.slice(0, 5).map((match) => ({
+      title: `${match.homeTeam} 🆚 ${match.awayTeam}`,
+      subtitle: `🏟 ${match.competition}\n📅 ${match.date}`,
+      buttons: [
+        {
+          type: "web_url",
+          url: match.url || "https://www.google.com/search?q=" + encodeURIComponent(`${match.homeTeam} vs ${match.awayTeam}`),
+          title: "View Details",
+        },
+      ],
+    }));
+
+    await callSendTemplate(senderId, elements);
   } catch (err) {
     console.error("⚽ Football API error:", err);
-    return "⚠️ Couldn’t fetch today’s football matches.";
+    await callSendAPI(senderId, "⚠️ Couldn’t fetch football matches.");
+  }
+}
+
+// ✅ Waifu Image
+async function getWaifu(senderId) {
+  try {
+    const res = await fetch("https://api.princetechn.com/api/anime/waifu?apikey=prince");
+    const data = await res.json();
+
+    const imageUrl = data.url || data.result || null;
+
+    if (imageUrl) {
+      const requestBody = {
+        recipient: { id: senderId },
+        message: {
+          attachment: {
+            type: "image",
+            payload: { url: imageUrl, is_reusable: true },
+          },
+        },
+      };
+
+      await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+    } else {
+      await callSendAPI(senderId, "⚠️ Couldn’t fetch Waifu image.");
+    }
+  } catch (err) {
+    console.error("👘 Waifu API error:", err);
+    await callSendAPI(senderId, "⚠️ Waifu fetch failed.");
   }
 }
 
@@ -154,26 +196,50 @@ function callSendAPI(senderPsid, response) {
   }).catch((err) => console.error("Unable to send:", err));
 }
 
-// ✅ Small command menu
+// ✅ Send template (cards) to Messenger
+function callSendTemplate(senderPsid, elements) {
+  const requestBody = {
+    recipient: { id: senderPsid },
+    message: {
+      attachment: {
+        type: "template",
+        payload: {
+          template_type: "generic",
+          elements: elements,
+        },
+      },
+    },
+  };
+
+  fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody),
+  }).catch((err) => console.error("Unable to send template:", err));
+}
+
+// ✅ Command Menu
 function commandMenu() {
-  return `🔻𝐂𝐨𝐦𝐦𝐚𝐧𝐝 𝐋𝐢𝐬𝐭🔻
+  return `🔻𝗖𝗼𝗺𝗺𝗮𝗻𝗱🔻
 
 💭 Advice  
 💌 Pickupline  
 💡 Quote  
-⚽ Matches today  
+⚽ Football  
+👘 Waifu  
 
 ══════════════════  
 📝 𝐇𝐨𝐰 𝐓𝐨 𝐔𝐬𝐞:  
 - "Advice" → random advice  
 - "Pickupline" → fun pickup line  
 - "Quote" → motivational quote  
-- "Matches today" → today’s football  
+- "Football" → today’s matches  
+- "Waifu" → random anime waifu image  
 
 ══════════════════  
 ⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐑𝐨𝐝𝐠𝐞𝐫𝐬`;
 }
 
 app.listen(PORT, () =>
-  console.log(`🔥 Toxic Lover running with Prince GPT + Football API on port ${PORT}`)
+  console.log(`🔥 Toxic Lover running with Prince GPT on port ${PORT}`)
 );
