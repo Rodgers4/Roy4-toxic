@@ -60,20 +60,9 @@ app.post("/webhook", async (req, res) => {
         else if (/^quote/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/quotes?apikey=prince", "💡 Quote");
         }
-        // 🎵 MP3 Download
-        else if (userMessage.toLowerCase().startsWith("mp3 ")) {
-          const link = userMessage.split(" ")[1];
-          reply = `🎵 MP3 Download: https://api.princetechn.com/api/download/mp3?apikey=prince&url=${encodeURIComponent(link)}`;
-        }
-        // 🎶 YTA Download
-        else if (userMessage.toLowerCase().startsWith("yta ")) {
-          const link = userMessage.split(" ")[1];
-          reply = `🎶 YTA Download: https://api.princetechn.com/api/download/yta?apikey=prince&url=${encodeURIComponent(link)}`;
-        }
-        // 🎬 MP4 Download
-        else if (userMessage.toLowerCase().startsWith("mp4 ")) {
-          const link = userMessage.split(" ")[1];
-          reply = `🎬 MP4 Download: https://api.princetechn.com/api/download/ytv?apikey=prince&url=${encodeURIComponent(link)}`;
+        // ⚽ Football matches today
+        else if (/^matches today$/i.test(userMessage) || /^football$/i.test(userMessage)) {
+          reply = await getFootballMatches();
         }
         // 🧠 GPT fallback
         else {
@@ -81,9 +70,9 @@ app.post("/webhook", async (req, res) => {
         }
 
         // 🎨 Styled GPT replies always end with Powered by Rodgers
-        const styledReply = reply.includes("💌") || reply.includes("💡") || reply.includes("💭") || reply.includes("🎵") || reply.includes("🎶") || reply.includes("🎬")
+        const styledReply = reply.includes("💌") || reply.includes("💡") || reply.includes("💭") || reply.includes("⚽")
           ? reply
-          : `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
+          : `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐑𝐎𝐘-𝐓𝐄𝐂𝐇`;
 
         console.log(`🤖 Toxic Lover reply: ${styledReply}`);
 
@@ -133,6 +122,24 @@ async function getPlain(url, label) {
   }
 }
 
+// ✅ Football Matches
+async function getFootballMatches() {
+  try {
+    const res = await fetch("https://api.princetechn.com/api/football/today-matches?apikey=prince");
+    const data = await res.json();
+    if (Array.isArray(data.matches) && data.matches.length > 0) {
+      const list = data.matches
+        .map(m => `⚽ ${m.home} vs ${m.away} — ${m.time}`)
+        .join("\n");
+      return `🏟 Today’s Football Matches:\n\n${list}`;
+    }
+    return "🏟 No football matches found for today.";
+  } catch (err) {
+    console.error("⚽ Football API error:", err);
+    return "⚠️ Couldn’t fetch today’s football matches.";
+  }
+}
+
 // ✅ Send text to Messenger
 function callSendAPI(senderPsid, response) {
   const requestBody = {
@@ -149,26 +156,24 @@ function callSendAPI(senderPsid, response) {
 
 // ✅ Small command menu
 function commandMenu() {
-  return `📌 𝐒𝐦𝐚𝐥𝐥 𝐂𝐨𝐦𝐦𝐚𝐧𝐝 𝐋𝐢𝐬𝐭 📌
+  return `🔻𝐂𝐨𝐦𝐦𝐚𝐧𝐝 𝐋𝐢𝐬𝐭🔻
 
 💭 Advice  
 💌 Pickupline  
 💡 Quote  
-🎵 mp3 <link> → Download MP3  
-🎶 yta <link> → Download YTA  
-🎬 mp4 <link> → Download MP4  
+⚽ Matches today  
 
 ══════════════════  
 📝 𝐇𝐨𝐰 𝐓𝐨 𝐔𝐬𝐞:  
 - "Advice" → random advice  
 - "Pickupline" → fun pickup line  
 - "Quote" → motivational quote  
-- "mp3/yta/mp4 <url>" → download YouTube media  
+- "Matches today" → today’s football  
 
 ══════════════════  
 ⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐑𝐨𝐝𝐠𝐞𝐫𝐬`;
 }
 
 app.listen(PORT, () =>
-  console.log(`🔥 Toxic Lover running with Prince GPT + Media DL on port ${PORT}`)
+  console.log(`🔥 Toxic Lover running with Prince GPT + Football API on port ${PORT}`)
 );
