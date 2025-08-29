@@ -60,13 +60,28 @@ app.post("/webhook", async (req, res) => {
         else if (/^quote/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/quotes?apikey=prince", "💡 Quote");
         }
+        // 🎵 MP3 Download
+        else if (userMessage.toLowerCase().startsWith("mp3 ")) {
+          const link = userMessage.split(" ")[1];
+          reply = `🎵 MP3 Download: https://api.princetechn.com/api/download/mp3?apikey=prince&url=${encodeURIComponent(link)}`;
+        }
+        // 🎶 YTA Download
+        else if (userMessage.toLowerCase().startsWith("yta ")) {
+          const link = userMessage.split(" ")[1];
+          reply = `🎶 YTA Download: https://api.princetechn.com/api/download/yta?apikey=prince&url=${encodeURIComponent(link)}`;
+        }
+        // 🎬 MP4 Download
+        else if (userMessage.toLowerCase().startsWith("mp4 ")) {
+          const link = userMessage.split(" ")[1];
+          reply = `🎬 MP4 Download: https://api.princetechn.com/api/download/ytv?apikey=prince&url=${encodeURIComponent(link)}`;
+        }
         // 🧠 GPT fallback
         else {
           reply = await askPrinceAI(userMessage);
         }
 
         // 🎨 Styled GPT replies always end with Powered by Rodgers
-        const styledReply = reply.includes("💌") || reply.includes("💡") || reply.includes("💭")
+        const styledReply = reply.includes("💌") || reply.includes("💡") || reply.includes("💭") || reply.includes("🎵") || reply.includes("🎶") || reply.includes("🎬")
           ? reply
           : `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
 
@@ -139,17 +154,21 @@ function commandMenu() {
 💭 Advice  
 💌 Pickupline  
 💡 Quote  
+🎵 mp3 <link> → Download MP3  
+🎶 yta <link> → Download YTA  
+🎬 mp4 <link> → Download MP4  
 
 ══════════════════  
 📝 𝐇𝐨𝐰 𝐓𝐨 𝐔𝐬𝐞:  
 - "Advice" → random advice  
 - "Pickupline" → fun pickup line  
 - "Quote" → motivational quote  
+- "mp3/yta/mp4 <url>" → download YouTube media  
 
 ══════════════════  
 ⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐑𝐨𝐝𝐠𝐞𝐫𝐬`;
 }
 
 app.listen(PORT, () =>
-  console.log(`🔥 Toxic Lover running with Prince GPT on port ${PORT}`)
+  console.log(`🔥 Toxic Lover running with Prince GPT + Media DL on port ${PORT}`)
 );
