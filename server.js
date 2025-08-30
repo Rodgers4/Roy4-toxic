@@ -36,50 +36,66 @@ app.post("/webhook", async (req, res) => {
         const userMessage = event.message.text.trim();
         console.log(`📩 User: ${userMessage}`);
 
-        let reply = "";
+        let reply;
 
         // 🏷 Identity replies
-        if (/what is your name/i.test(userMessage)) {
+        if (userMessage.toLowerCase().includes("what is your name")) {
           reply = "🤍 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 created by 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 🤍";
-        } else if (/who is your owner/i.test(userMessage)) {
+        } else if (userMessage.toLowerCase().includes("who is your owner")) {
           reply = "💙 𝐒𝐈𝐑 𝐑𝐎𝐃𝐆𝐄𝐑𝐒 💙";
-        }
+        } 
         // 📝 Menu command
-        else if (/menu/i.test(userMessage)) {
+        else if (userMessage.toLowerCase().includes("menu")) {
           reply = commandMenu();
         }
         // 🎭 Advice
-        else if (/^advice$/i.test(userMessage)) {
+        else if (/^advice/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/advice?apikey=prince", "💭 Advice");
         }
         // 🎭 Pickupline
-        else if (/^pickupline$/i.test(userMessage) || /^pickup$/i.test(userMessage)) {
+        else if (/^pickupline/i.test(userMessage) || /^pickup/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/pickupline?apikey=prince", "💌 Pickupline");
         }
         // 🎭 Quote
-        else if (/^quote$/i.test(userMessage)) {
+        else if (/^quote/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/quotes?apikey=prince", "💡 Quote");
         }
-        // ⚽ Football
-        else if (/^football$/i.test(userMessage)) {
-          await getFootballMatches(senderId);
-          reply = "";
+        // ⚽ Matches
+        else if (/^matches/i.test(userMessage)) {
+          reply = await getPlain("https://api.princetechn.com/api/football/today-matches?apikey=prince", "⚽ Matches");
         }
-        // 👘 Waifu
-        else if (/^waifu$/i.test(userMessage)) {
-          await getWaifu(senderId);
-          reply = "";
+        // 👧 Waifu
+        else if (/^waifu/i.test(userMessage)) {
+          reply = await getPlain("https://api.princetechn.com/api/anime/waifu?apikey=prince", "👧 Waifu");
+        }
+        // 📚 Define
+        else if (/^define/i.test(userMessage)) {
+          const term = userMessage.split(" ")[1] || "Dog";
+          reply = await getPlain(`https://api.princetechn.com/api/tools/define?apikey=prince&term=${encodeURIComponent(term)}`, "📚 Define");
+        }
+        // ✨ Fancy
+        else if (/^fancy /i.test(userMessage)) {
+          const text = userMessage.replace(/^fancy /i, "");
+          reply = await getPlain(`https://api.princetechn.com/api/tools/fancy?apikey=prince&text=${encodeURIComponent(text)}`, "✨ Fancy");
+        }
+        // ✨ Fancyv2
+        else if (/^fancyv2 /i.test(userMessage)) {
+          const text = userMessage.replace(/^fancyv2 /i, "");
+          reply = await getPlain(`https://api.princetechn.com/api/tools/fancyv2?apikey=prince&text=${encodeURIComponent(text)}`, "✨ Fancyv2");
         }
         // 🧠 GPT fallback
         else {
           reply = await askPrinceAI(userMessage);
         }
 
-        if (reply) {
-          const styledReply = `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
-          console.log(`🤖 Toxic Lover reply: ${styledReply}`);
-          callSendAPI(senderId, styledReply);
-        }
+        // 🎨 Styled replies
+        const styledReply = reply.includes("💭") || reply.includes("💌") || reply.includes("💡") || reply.includes("⚽") || reply.includes("👧") || reply.includes("📚") || reply.includes("✨")
+          ? reply
+          : `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
+
+        console.log(`🤖 Toxic Lover reply: ${styledReply}`);
+
+        callSendAPI(senderId, styledReply);
       }
     }
     res.sendStatus(200);
@@ -98,7 +114,13 @@ async function askPrinceAI(message) {
 
     try {
       const data = JSON.parse(text);
-      return data.response || data.result || data.answer || JSON.stringify(data) || "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 (empty reply)";
+      return (
+        data.response ||
+        data.result ||
+        data.answer ||
+        JSON.stringify(data) ||
+        "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 (empty reply)"
+      );
     } catch {
       return text || "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 (invalid response)";
     }
@@ -113,72 +135,9 @@ async function getPlain(url, label) {
   try {
     const res = await fetch(url);
     const data = await res.json();
-    return `${label}: ${data.result || data.response || data.advice || data.quote || "No data"}`;
+    return `${label}: ${data.result || data.response || data.advice || data.quote || data.definition || "No data"}`;
   } catch {
     return `⚠️ Failed to fetch ${label}`;
-  }
-}
-
-// ✅ Football Today - Send as Cards
-async function getFootballMatches(senderId) {
-  try {
-    const res = await fetch("https://api.princetechn.com/api/football/today-matches?apikey=prince");
-    const data = await res.json();
-
-    if (!data.result || data.result.length === 0) {
-      await callSendAPI(senderId, "⚽ No football matches found for today.");
-      return;
-    }
-
-    const elements = data.result.slice(0, 5).map((match) => ({
-      title: `${match.homeTeam} 🆚 ${match.awayTeam}`,
-      subtitle: `🏟 ${match.competition}\n📅 ${match.date}`,
-      buttons: [
-        {
-          type: "web_url",
-          url: match.url || "https://www.google.com/search?q=" + encodeURIComponent(`${match.homeTeam} vs ${match.awayTeam}`),
-          title: "View Details",
-        },
-      ],
-    }));
-
-    await callSendTemplate(senderId, elements);
-  } catch (err) {
-    console.error("⚽ Football API error:", err);
-    await callSendAPI(senderId, "⚠️ Couldn’t fetch football matches.");
-  }
-}
-
-// ✅ Waifu Image
-async function getWaifu(senderId) {
-  try {
-    const res = await fetch("https://api.princetechn.com/api/anime/waifu?apikey=prince");
-    const data = await res.json();
-
-    const imageUrl = data.url || data.result || null;
-
-    if (imageUrl) {
-      const requestBody = {
-        recipient: { id: senderId },
-        message: {
-          attachment: {
-            type: "image",
-            payload: { url: imageUrl, is_reusable: true },
-          },
-        },
-      };
-
-      await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-    } else {
-      await callSendAPI(senderId, "⚠️ Couldn’t fetch Waifu image.");
-    }
-  } catch (err) {
-    console.error("👘 Waifu API error:", err);
-    await callSendAPI(senderId, "⚠️ Waifu fetch failed.");
   }
 }
 
@@ -196,50 +155,38 @@ function callSendAPI(senderPsid, response) {
   }).catch((err) => console.error("Unable to send:", err));
 }
 
-// ✅ Send template (cards) to Messenger
-function callSendTemplate(senderPsid, elements) {
-  const requestBody = {
-    recipient: { id: senderPsid },
-    message: {
-      attachment: {
-        type: "template",
-        payload: {
-          template_type: "generic",
-          elements: elements,
-        },
-      },
-    },
-  };
-
-  fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(requestBody),
-  }).catch((err) => console.error("Unable to send template:", err));
-}
-
-// ✅ Command Menu
+// ✅ Grouped Command Menu
 function commandMenu() {
-  return `🔻𝗖𝗼𝗺𝗺𝗮𝗻𝗱🔻
+  return `➤ 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒  
 
+━━━━━━━━━━━━━━━━━━━
+👑  𝐑𝐎𝐘𝐒 𝐂𝐌𝐃𝐒  
+⚽ Matches  
+📚 Define <word>  
+✨ Fancy <text>  
+✨ Fancyv2 <text>  
+
+💖  𝐁𝐄𝐋𝐋𝐀 𝐂𝐌𝐃𝐒  
 💭 Advice  
 💌 Pickupline  
 💡 Quote  
-⚽ Football  
-👘 Waifu  
+👧 Waifu  
+━━━━━━━━━━━━━━━━━━━
 
-══════════════════  
-📝 𝐇𝐨𝐰 𝐓𝐨 𝐔𝐬𝐞:  
-- "Advice" → random advice  
-- "Pickupline" → fun pickup line  
-- "Quote" → motivational quote  
-- "Football" → today’s matches  
-- "Waifu" → random anime waifu image  
+📝 𝐇𝐨𝐰 𝐓𝐨 𝐔𝐬𝐞  
+- Matches → today’s football games  
+- Define Dog → definition of Dog  
+- Fancy Prince Tech → fancy styled text  
+- Fancyv2 Prince Tech → fancy v2 styled text  
+- Advice → random advice  
+- Pickupline → fun pickup line  
+- Quote → motivational quote  
+- Waifu → random waifu  
 
-══════════════════  
-⚡ 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐑𝐨𝐝𝐠𝐞𝐫𝐬`;
+━━━━━━━━━━━━━━━━━━━
+⚡ 𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐃𝐆𝐄𝐑𝐒`;
 }
 
 app.listen(PORT, () =>
-  console.log(`🔥 Toxic Lover running with Prince GPT on port ${PORT}`)
+  console.log(`🔥 Toxic Lover running with Prince GPT + Commands on port ${PORT}`)
 );
