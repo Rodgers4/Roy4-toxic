@@ -58,7 +58,7 @@ app.post("/webhook", async (req, res) => {
         // Default → GPT
         else {
           reply = await askPrinceAI(userMessage);
-          callSendAPI(senderId, `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n『ＰＯＷＥＲＥＤ ＢＹ ＲＯＤＧＥＲＳ』`);
+          callSendAPI(senderId, `💠 ${reply}`);
         }
       }
     }
@@ -85,17 +85,18 @@ async function getPlain(url, label) {
   try {
     const res = await fetch(url);
     const data = await res.json();
-    return `${label}: ${data.result || data.response || data.advice || data.quote || data.definition || "No data"}`;
+    return `${label}: ${data.result || data.response || data.advice || data.quote || "No data"}`;
   } catch {
     return `⚠️ Failed to fetch ${label}`;
   }
 }
 
-// ✅ Send text
+// ✅ Send text (appends footer automatically)
 function callSendAPI(senderPsid, response) {
+  const footer = `\n\nType Menu to see cmds\n━━━━━━━━━━━━━━━\nᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴏʏ4`;
   const body = {
     recipient: { id: senderPsid },
-    message: { text: response },
+    message: { text: response + footer },
   };
   fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
     method: "POST",
@@ -104,16 +105,19 @@ function callSendAPI(senderPsid, response) {
   }).catch((err) => console.error("Unable to send:", err));
 }
 
-// ✅ Send image
+// ✅ Send image (also appends footer separately)
 function sendImage(senderPsid, imageUrl) {
-  const body = {
+  const bodyImg = {
     recipient: { id: senderPsid },
     message: { attachment: { type: "image", payload: { url: imageUrl, is_reusable: true } } },
   };
   fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(bodyImg),
+  }).then(() => {
+    // send footer after image
+    callSendAPI(senderPsid, "");
   }).catch((err) => console.error("Unable to send image:", err));
 }
 
@@ -136,9 +140,7 @@ async function commandMenu() {
 💡 Quote  
 🐾 Waifu  
 
-━━━━━━━━━━━━━━━${quote}  
-
-『ＰＯＷＥＲＥＤ ＢＹ ＲＯＤＧＥＲＳ』`;
+━━━━━━━━━━━━━━━${quote}`;
 }
 
 const PORT = process.env.PORT || 3000;
