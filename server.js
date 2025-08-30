@@ -34,30 +34,10 @@ app.post("/webhook", async (req, res) => {
 
         // 🎭 Command handlers
         if (userMessage.toLowerCase().includes("menu")) {
-          reply = commandMenu();
+          reply = await commandMenu(); // fetch menu + quote
           callSendAPI(senderId, reply);
         }
-        // ROY’S COMMANDS
-        else if (/^matches$/i.test(userMessage)) {
-          reply = await getPlain("https://api.princetechn.com/api/football/today-matches?apikey=prince", "⚽ Matches");
-          callSendAPI(senderId, reply);
-        } 
-        else if (/^define/i.test(userMessage)) {
-          const term = userMessage.split(" ")[1] || "Unknown";
-          reply = await getPlain(`https://api.princetechn.com/api/tools/define?apikey=prince&term=${encodeURIComponent(term)}`, "📖 Define");
-          callSendAPI(senderId, reply);
-        }
-        else if (/^fancyv2/i.test(userMessage)) {
-          const text = userMessage.replace(/^fancyv2/i, "").trim() || "Prince Tech";
-          reply = await getPlain(`https://api.princetechn.com/api/tools/fancyv2?apikey=prince&text=${encodeURIComponent(text)}`, "✨ FancyV2");
-          callSendAPI(senderId, reply);
-        }
-        else if (/^fancy/i.test(userMessage)) {
-          const text = userMessage.replace(/^fancy/i, "").trim() || "Prince Tech";
-          reply = await getPlain(`https://api.princetechn.com/api/tools/fancy?apikey=prince&text=${encodeURIComponent(text)}`, "🌟 Fancy");
-          callSendAPI(senderId, reply);
-        }
-        // BELLA’S COMMANDS
+        // ACTIVE CMDS
         else if (/^advice$/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/advice?apikey=prince", "💭 Advice");
           callSendAPI(senderId, reply);
@@ -78,7 +58,7 @@ app.post("/webhook", async (req, res) => {
         // Default → GPT
         else {
           reply = await askPrinceAI(userMessage);
-          callSendAPI(senderId, `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`);
+          callSendAPI(senderId, `💠 ${reply}\n\n━━━━━━━━━━━━━━━\n『ＰＯＷＥＲＥＤ ＢＹ ＲＯＤＧＥＲＳ』`);
         }
       }
     }
@@ -137,34 +117,28 @@ function sendImage(senderPsid, imageUrl) {
   }).catch((err) => console.error("Unable to send image:", err));
 }
 
-// ✅ Menu
-function commandMenu() {
+// ✅ Menu with quote + powered by
+async function commandMenu() {
+  let quote = "";
+  try {
+    const res = await fetch("https://api.princetechn.com/api/fun/quotes?apikey=prince");
+    const data = await res.json();
+    quote = `\n💡 Quote: ${data.quote || data.result || "Stay motivated!"}`;
+  } catch {
+    quote = "\n💡 Quote: Stay motivated!";
+  }
+
   return `➤ 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐂𝐌𝐃𝐒  
 
-👑 𝗥𝗢𝗬'𝗦 𝗖𝗠𝗗𝗦  
-⚽ Matches  
-📖 Define <word>  
-🌟 Fancy <text>  
-✨ Fancyv2 <text>  
-
-💝 𝗕𝗘𝗟𝗟𝗔'𝗦 𝗖𝗠𝗗𝗦  
+💝 𝗔𝗖𝗧𝗜𝗩𝗘 𝗖𝗠𝗗𝗦  
 💭 Advice  
 💌 Pickupline  
 💡 Quote  
 🐾 Waifu  
 
-━━━━━━━━━━━━━━━  
-📔 𝗛𝗼𝘄 𝗧𝗼 𝗨𝘀𝗲  
-- Matches → today’s football games  
-- Define Dog → definition of Dog  
-- Fancy Prince Tech → fancy styled text  
-- Fancyv2 Prince Tech → fancy v2 styled text  
-- Advice → random advice  
-- Pickupline → fun pickup line  
-- Quote → motivational quote  
-- Waifu → random waifu  
+━━━━━━━━━━━━━━━${quote}  
 
-⚡ 𝗣𝗢𝗪𝗘𝗥𝗘𝗗 𝗕𝗬 𝗥𝗢𝗗𝗚𝗘𝗥𝗦`;
+『ＰＯＷＥＲＥＤ ＢＹ ＲＯＤＧＥＲＳ』`;
 }
 
 const PORT = process.env.PORT || 3000;
