@@ -93,7 +93,7 @@ async function getPlain(url, label) {
 
 // ✅ Send text (appends footer automatically)
 function callSendAPI(senderPsid, response) {
-  const footer = `\n\n𝑻𝒚𝒑𝒆 𝒎𝒆𝒏𝒖 𝒕𝒐 𝒔𝒆𝒆 𝒄𝒐𝒎𝒎𝒂𝒏𝒅𝒔\n━━━━━━━━━━━━━━━\nᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴏʏ4`;
+  const footer = `\n\n𝑻𝒚𝒑𝒆 𝒎𝒆𝒏𝒖 𝒕𝒐 𝒔𝒆𝒆 𝒄𝒐𝒎𝒎𝒂𝒏𝒅𝒔\n━━━━━━━━━━━━━━━\n𝑷𝒐𝒘𝒆𝒓𝒆𝒅 𝒃𝒚 𝑹𝒐𝒚𝑻𝒆𝒄𝒉`;
   const body = {
     recipient: { id: senderPsid },
     message: { text: response + footer },
