@@ -1,147 +1,130 @@
-// server.js
 import express from "express";
 import fetch from "node-fetch";
+import bodyParser from "body-parser";
 
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
 
-// Messenger tokens (INLINE, no .env)
-const VERIFY_TOKEN = "Rodgers4";
-const PAGE_ACCESS_TOKEN = "EAAU7cBW7QjkBPOAa7cUMw5ZALBeqNfjYhpyxm86o0yRR7n7835SIv5YHVxsyKozKgZAltZCo0GiPK4ZBrIMX2Ym7PTHtdfrf25xDnp4S2PogGVnDxBftFunycaHgsmvtmrV90sEHHNNgmn4oxa4pI27ThWZBdvosEqGokHs1ZCDXZAduFVF9aQ01m2wgZAZBZC01KB0CYeOZAHc5wZDZD";
+// ✅ Your Tokens (Directly Set)
+const PAGE_ACCESS_TOKEN = "EAAT0TVvmUIYBPFRyZAYWtZCppUrjygNmuBwglLZBhgNTtVtdkeAh0hmc0bqiQbv2kGyhSJvfpGXeWpZArydfcFy3lDOBId7VZCWkwSIMOPhilSWaJJ8JjJbETKZBjX1tVUoope98ZAhZBCSHsxsZC638DTgi2uAt6ImPS40g1Henc9jwVyvMTzPIkBK1SwgX9ljl2ChU95EZAtUAZDZD";
+const VERIFY_TOKEN = "rodgers4";
 
-// ✅ Verify Webhook
-app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-  if (mode && token === VERIFY_TOKEN) {
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
+// =============== HELPERS ===============
+async function callGemini(message) {
+  try {
+    const res = await fetch("https://freepass.ai/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content: message }],
+      }),
+    });
+
+    const data = await res.json();
+    if (data && data.output) {
+      return data.output.trim();
+    } else {
+      return "⚠️ Sorry, I couldn't get a response right now.";
+    }
+  } catch (err) {
+    console.error("Gemini API Error:", err);
+    return "⚠️ Error connecting to AI service.";
   }
-});
+}
 
-// ✅ Handle Messages
+async function callAPI(url) {
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error("API Error:", err);
+    return null;
+  }
+}
+
+// =============== MESSENGER FUNCTIONS ===============
+async function sendMessage(senderId, message) {
+  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient: { id: senderId },
+      message: {
+        text: `${message}\n\nType Menu to see cmds\n──────────────\n𝗣𝗢𝗪𝗘𝗥𝗘𝗗 𝗕𝗬 𝗥𝗢𝗬𝟰`,
+      },
+    }),
+  });
+}
+
+// =============== COMMAND HANDLER ===============
 app.post("/webhook", async (req, res) => {
-  if (req.body.object === "page") {
-    for (const entry of req.body.entry) {
-      const event = entry.messaging[0];
-      const senderId = event.sender.id;
+  const body = req.body;
 
-      if (event.message && event.message.text) {
-        const userMessage = event.message.text.trim();
-        let reply;
+  if (body.object === "page") {
+    body.entry.forEach(async (entry) => {
+      const webhookEvent = entry.messaging[0];
+      const senderId = webhookEvent.sender.id;
 
-        // 🎭 Command handlers
-        if (userMessage.toLowerCase().includes("menu")) {
-          reply = await commandMenu(); // fetch menu + quote
-          callSendAPI(senderId, reply);
+      if (webhookEvent.message && webhookEvent.message.text) {
+        const text = webhookEvent.message.text.trim().toLowerCase();
+
+        if (text === "menu") {
+          await sendMessage(
+            senderId,
+            `➤ 𝐀𝐂𝐓𝐈𝐕𝐄 𝐂𝐌𝐃𝐒\n\n💖 Advice\n💌 Pickupline\n📖 Quote\n👸 Waifu\n\n📖 Quote of the Day:\n✨ "Success is not final, failure is not fatal: It is the courage to continue that counts."`
+          );
         }
-        // ACTIVE CMDS
-        else if (/^advice$/i.test(userMessage)) {
-          reply = await getPlain("https://api.princetechn.com/api/fun/advice?apikey=prince", "💭 Advice");
-          callSendAPI(senderId, reply);
+
+        else if (text === "advice") {
+          const data = await callAPI("https://api.adviceslip.com/advice");
+          await sendMessage(senderId, `💖 Advice: ${data?.slip?.advice || "No advice available."}`);
         }
-        else if (/^pickupline$/i.test(userMessage)) {
-          reply = await getPlain("https://api.princetechn.com/api/fun/pickupline?apikey=prince", "💌 Pickupline");
-          callSendAPI(senderId, reply);
+
+        else if (text === "pickupline") {
+          const data = await callAPI("https://api.princetechn.com/api/tools/pickupline?apikey=prince");
+          await sendMessage(senderId, `💌 Pickup: ${data?.result || "No pickup line found."}`);
         }
-        else if (/^quote$/i.test(userMessage)) {
-          reply = await getPlain("https://api.princetechn.com/api/fun/quotes?apikey=prince", "💡 Quote");
-          callSendAPI(senderId, reply);
+
+        else if (text === "quote") {
+          const data = await callAPI("https://api.quotable.io/random");
+          await sendMessage(senderId, `📖 Quote: "${data?.content}" — ${data?.author}`);
         }
-        else if (/^waifu$/i.test(userMessage)) {
-          const res = await fetch("https://api.princetechn.com/api/anime/waifu?apikey=prince");
-          const data = await res.json();
-          sendImage(senderId, data.url || "https://i.waifu.pics/qkCL5Z5.jpg");
+
+        else if (text === "waifu") {
+          const data = await callAPI("https://api.princetechn.com/api/anime/waifu?apikey=prince");
+          await sendMessage(senderId, `👸 Waifu: ${data?.url || "No waifu available."}`);
         }
-        // Default → GPT
+
+        // 👇 DEFAULT → AI CHAT
         else {
-          reply = await askPrinceAI(userMessage);
-          callSendAPI(senderId, `💠 ${reply}`);
+          const reply = await callGemini(text);
+          await sendMessage(senderId, reply);
         }
       }
-    }
-    res.sendStatus(200);
+    });
+
+    res.status(200).send("EVENT_RECEIVED");
   } else {
     res.sendStatus(404);
   }
 });
 
-// ✅ GPT Fallback
-async function askPrinceAI(message) {
-  try {
-    const url = `https://api.princetechn.com/api/ai/ai?apikey=prince&q=${encodeURIComponent(message)}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.response || data.result || "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑";
-  } catch {
-    return "⚠️ Error reaching GPT API";
+// =============== VERIFY WEBHOOK ===============
+app.get("/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode && token) {
+    if (mode === "subscribe" && token === VERIFY_TOKEN) {
+      console.log("✅ WEBHOOK_VERIFIED");
+      res.status(200).send(challenge);
+    } else {
+      res.sendStatus(403);
+    }
   }
-}
+});
 
-// ✅ Fetch plain API text
-async function getPlain(url, label) {
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    return `${label}: ${data.result || data.response || data.advice || data.quote || "No data"}`;
-  } catch {
-    return `⚠️ Failed to fetch ${label}`;
-  }
-}
-
-// ✅ Send text (appends footer automatically)
-function callSendAPI(senderPsid, response) {
-  const footer = `\n\nType Menu to see cmds\n━━━━━━━━━━━━━━━\nᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴏʏ4`;
-  const body = {
-    recipient: { id: senderPsid },
-    message: { text: response + footer },
-  };
-  fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }).catch((err) => console.error("Unable to send:", err));
-}
-
-// ✅ Send image (also appends footer separately)
-function sendImage(senderPsid, imageUrl) {
-  const bodyImg = {
-    recipient: { id: senderPsid },
-    message: { attachment: { type: "image", payload: { url: imageUrl, is_reusable: true } } },
-  };
-  fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(bodyImg),
-  }).then(() => {
-    // send footer after image
-    callSendAPI(senderPsid, "");
-  }).catch((err) => console.error("Unable to send image:", err));
-}
-
-// ✅ Menu with quote + powered by
-async function commandMenu() {
-  let quote = "";
-  try {
-    const res = await fetch("https://api.princetechn.com/api/fun/quotes?apikey=prince");
-    const data = await res.json();
-    quote = `\n💡 Quote: ${data.quote || data.result || "Stay motivated!"}`;
-  } catch {
-    quote = "\n💡 Quote: Stay motivated!";
-  }
-
-  return `➤ 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐂𝐌𝐃𝐒  
-
-💝 𝗔𝗖𝗧𝗜𝗩𝗘 𝗖𝗠𝗗𝗦  
-💭 Advice  
-💌 Pickupline  
-💡 Quote  
-🐾 Waifu  
-
-━━━━━━━━━━━━━━━${quote}`;
-}
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🔥 Toxic Lover running on port ${PORT}`));
+app.listen(3000, () => console.log("🚀 Toxic Lover Bot is live!"));
