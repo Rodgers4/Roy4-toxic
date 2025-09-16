@@ -1,130 +1,70 @@
 import express from "express";
-import fetch from "node-fetch";
 import bodyParser from "body-parser";
+import fetch from "node-fetch";
 
 const app = express();
 app.use(bodyParser.json());
 
-// ✅ Your Tokens (Directly Set)
 const PAGE_ACCESS_TOKEN = "EAAT0TVvmUIYBPFRyZAYWtZCppUrjygNmuBwglLZBhgNTtVtdkeAh0hmc0bqiQbv2kGyhSJvfpGXeWpZArydfcFy3lDOBId7VZCWkwSIMOPhilSWaJJ8JjJbETKZBjX1tVUoope98ZAhZBCSHsxsZC638DTgi2uAt6ImPS40g1Henc9jwVyvMTzPIkBK1SwgX9ljl2ChU95EZAtUAZDZD";
 const VERIFY_TOKEN = "rodgers4";
 
-// =============== HELPERS ===============
-async function callGemini(message) {
-  try {
-    const res = await fetch("https://freepass.ai/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: message }],
-      }),
-    });
+// ✅ Messenger Webhook Verification
+app.get("/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
 
-    const data = await res.json();
-    if (data && data.output) {
-      return data.output.trim();
-    } else {
-      return "⚠️ Sorry, I couldn't get a response right now.";
-    }
-  } catch (err) {
-    console.error("Gemini API Error:", err);
-    return "⚠️ Error connecting to AI service.";
+  if (mode && token && mode === "subscribe" && token === VERIFY_TOKEN) {
+    console.log("✅ WEBHOOK VERIFIED");
+    res.status(200).send(challenge);
+  } else {
+    res.sendStatus(403);
   }
-}
+});
 
-async function callAPI(url) {
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    console.error("API Error:", err);
-    return null;
-  }
-}
-
-// =============== MESSENGER FUNCTIONS ===============
-async function sendMessage(senderId, message) {
-  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      recipient: { id: senderId },
-      message: {
-        text: `${message}\n\nType Menu to see cmds\n──────────────\n𝗣𝗢𝗪𝗘𝗥𝗘𝗗 𝗕𝗬 𝗥𝗢𝗬𝟰`,
-      },
-    }),
-  });
-}
-
-// =============== COMMAND HANDLER ===============
+// ✅ Main Webhook Listener
 app.post("/webhook", async (req, res) => {
   const body = req.body;
 
   if (body.object === "page") {
-    body.entry.forEach(async (entry) => {
-      const webhookEvent = entry.messaging[0];
-      const senderId = webhookEvent.sender.id;
+    for (const entry of body.entry) {
+      for (const event of entry.messaging) {
+        if (event.message && event.message.text) {
+          const senderId = event.sender.id;
+          const userMessage = event.message.text;
 
-      if (webhookEvent.message && webhookEvent.message.text) {
-        const text = webhookEvent.message.text.trim().toLowerCase();
+          if (userMessage.toLowerCase() === ".menu") {
+            await sendMessage(senderId, "🔥 TOXIC LOVER MENU 🔥\n\n1. .menu\n2. .owner\n3. .about\n\nPOWERED BY RODGERS\nType anything to chat with AI 👇");
+          } else if (userMessage.toLowerCase() === ".owner") {
+            await sendMessage(senderId, "Name: RODGERS ONYANGO\nHome: KISUMU KENYA\nStatus: SINGLE\nCONT: 0755660053\nAGE: 17 YEARS\nEDU..: BACHELOR DEGREE\nINST: EGERTON.");
+          } else {
+            // ✅ NEW: Use PrinceTech GPT API
+            const aiResponse = await fetch(`https://api.princetechn.com/api/ai/gpt4?apikey=prince&q=${encodeURIComponent(userMessage)}`)
+              .then(res => res.json())
+              .catch(err => ({ message: "⚠️ AI API Error, please try again later." }));
 
-        if (text === "menu") {
-          await sendMessage(
-            senderId,
-            `➤ 𝐀𝐂𝐓𝐈𝐕𝐄 𝐂𝐌𝐃𝐒\n\n💖 Advice\n💌 Pickupline\n📖 Quote\n👸 Waifu\n\n📖 Quote of the Day:\n✨ "Success is not final, failure is not fatal: It is the courage to continue that counts."`
-          );
-        }
-
-        else if (text === "advice") {
-          const data = await callAPI("https://api.adviceslip.com/advice");
-          await sendMessage(senderId, `💖 Advice: ${data?.slip?.advice || "No advice available."}`);
-        }
-
-        else if (text === "pickupline") {
-          const data = await callAPI("https://api.princetechn.com/api/tools/pickupline?apikey=prince");
-          await sendMessage(senderId, `💌 Pickup: ${data?.result || "No pickup line found."}`);
-        }
-
-        else if (text === "quote") {
-          const data = await callAPI("https://api.quotable.io/random");
-          await sendMessage(senderId, `📖 Quote: "${data?.content}" — ${data?.author}`);
-        }
-
-        else if (text === "waifu") {
-          const data = await callAPI("https://api.princetechn.com/api/anime/waifu?apikey=prince");
-          await sendMessage(senderId, `👸 Waifu: ${data?.url || "No waifu available."}`);
-        }
-
-        // 👇 DEFAULT → AI CHAT
-        else {
-          const reply = await callGemini(text);
-          await sendMessage(senderId, reply);
+            await sendMessage(senderId, aiResponse.response || aiResponse.message || "❌ No response from AI.");
+          }
         }
       }
-    });
-
+    }
     res.status(200).send("EVENT_RECEIVED");
   } else {
     res.sendStatus(404);
   }
 });
 
-// =============== VERIFY WEBHOOK ===============
-app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
+// ✅ Function to send message back to user
+async function sendMessage(senderId, text) {
+  await fetch(`https://graph.facebook.com/v17.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient: { id: senderId },
+      message: { text },
+    }),
+  });
+}
 
-  if (mode && token) {
-    if (mode === "subscribe" && token === VERIFY_TOKEN) {
-      console.log("✅ WEBHOOK_VERIFIED");
-      res.status(200).send(challenge);
-    } else {
-      res.sendStatus(403);
-    }
-  }
-});
-
-app.listen(3000, () => console.log("🚀 Toxic Lover Bot is live!"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Toxic Lover running on port ${PORT}`));
