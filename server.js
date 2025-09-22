@@ -37,6 +37,7 @@ app.post("/webhook", async (req, res) => {
           reply = await commandMenu(); // fetch menu + quote
           callSendAPI(senderId, reply);
         }
+        // ACTIVE CMDS
         else if (/^advice$/i.test(userMessage)) {
           reply = await getPlain("https://api.princetechn.com/api/fun/advice?apikey=prince", "💭 Advice");
           callSendAPI(senderId, reply);
@@ -53,6 +54,26 @@ app.post("/webhook", async (req, res) => {
           const res = await fetch("https://api.princetechn.com/api/anime/waifu?apikey=prince");
           const data = await res.json();
           sendImage(senderId, data.url || "https://i.waifu.pics/qkCL5Z5.jpg");
+        }
+        // 🌦️ Weather
+        else if (/^weather$/i.test(userMessage)) {
+          reply = await getPlain("https://api.princetechn.com/api/search/weather?apikey=prince&location=Kisumu", "🌦️ Weather");
+          callSendAPI(senderId, reply);
+        }
+        // 🎵 Spotify Search
+        else if (/^spotify$/i.test(userMessage)) {
+          reply = await getPlain("https://api.princetechn.com/api/search/spotifysearch?apikey=prince&query=Spectre", "🎵 Spotify");
+          callSendAPI(senderId, reply);
+        }
+        // 🎤 Lyrics
+        else if (/^lyrics$/i.test(userMessage)) {
+          reply = await getPlain("https://api.princetechn.com/api/search/lyrics?apikey=prince&query=Dynasty+Miaa", "🎤 Lyrics");
+          callSendAPI(senderId, reply);
+        }
+        // 📚 Wikimedia
+        else if (/^wiki$/i.test(userMessage)) {
+          reply = await getPlain("https://api.princetechn.com/api/search/wikimedia?apikey=prince&title=Elon+Musk", "📚 Wiki");
+          callSendAPI(senderId, reply);
         }
         // 🔹 Default → GPT answers everything
         else {
@@ -93,7 +114,7 @@ async function getPlain(url, label) {
 
 // ✅ Send text (appends footer automatically)
 function callSendAPI(senderPsid, response) {
-  const footer = `\n\nтуρє ᴹᴱᴺᵁ тσ ѕєє αναιℓαвℓє ¢м∂ѕ\n━━━━━━━━━━━━━━━\nᴩᴏᴡᴇʀᴇᴅ ʙy ʀᴏyᴛᴇᴄʜ `;
+  const footer = `\n\nType Menu to see cmds\n━━━━━━━━━━━━━━━\nᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴏʏ4`;
   const body = {
     recipient: { id: senderPsid },
     message: { text: response + footer },
@@ -116,12 +137,11 @@ function sendImage(senderPsid, imageUrl) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(bodyImg),
   }).then(() => {
-    // send footer after image
     callSendAPI(senderPsid, "");
   }).catch((err) => console.error("Unable to send image:", err));
 }
 
-// ✅ Menu with quote + powered by
+// ✅ Menu with new commands
 async function commandMenu() {
   let quote = "";
   try {
@@ -139,6 +159,10 @@ async function commandMenu() {
 💌 Pickupline  
 💡 Quote  
 🐾 Waifu  
+🌦️ Weather  
+🎵 Spotify  
+🎤 Lyrics  
+📚 Wiki  
 
 ━━━━━━━━━━━━━━━${quote}`;
 }
