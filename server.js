@@ -1,170 +1,122 @@
-// server.js
 import express from "express";
+import bodyParser from "body-parser";
 import fetch from "node-fetch";
 
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
 
-// Messenger tokens (INLINE, no .env)
-const VERIFY_TOKEN = "Rodgers4";
-const PAGE_ACCESS_TOKEN = "EAAU7cBW7QjkBPOAa7cUMw5ZALBeqNfjYhpyxm86o0yRR7n7835SIv5YHVxsyKozKgZAltZCo0GiPK4ZBrIMX2Ym7PTHtdfrf25xDnp4S2PogGVnDxBftFunycaHgsmvtmrV90sEHHNNgmn4oxa4pI27ThWZBdvosEqGokHs1ZCDXZAduFVF9aQ01m2wgZAZBZC01KB0CYeOZAHc5wZDZD";
+// ✅ Facebook Tokens
+const PAGE_ACCESS_TOKEN = "EAAT0TVvmUIYBPFRyZAYWtZCppUrjygNmuBwglLZBhgNTtVtdkeAh0hmc0bqiQbv2kGyhSJvfpGXeWpZArydfcFy3lDOBId7VZCWkwSIMOPhilSWaJJ8JjJbETKZBjX1tVUoope98ZAhZBCSHsxsZC638DTgi2uAt6ImPS40g1Henc9jwVyvMTzPIkBK1SwgX9ljl2ChU95EZAtUAZDZD";
+const VERIFY_TOKEN = "rodgers4";
 
 // ✅ Verify Webhook
 app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-  if (mode && token === VERIFY_TOKEN) {
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
-  }
+  if (req.query["hub.mode"] === "subscribe" && req.query["hub.verify_token"] === VERIFY_TOKEN) {
+    console.log("✅ Webhook Verified");
+    res.status(200).send(req.query["hub.challenge"]);
+  } else res.sendStatus(403);
 });
 
-// ✅ Handle Messages
+// ✅ Webhook POST
 app.post("/webhook", async (req, res) => {
-  if (req.body.object === "page") {
-    for (const entry of req.body.entry) {
+  const body = req.body;
+  if (body.object === "page") {
+    for (const entry of body.entry) {
       const event = entry.messaging[0];
-      const senderId = event.sender.id;
+      const sender = event.sender.id;
 
-      if (event.message && event.message.text) {
-        const userMessage = event.message.text.trim();
+      if (event.message) {
+        await sendTyping(sender);
 
-        // Start typing
-        await sendTyping(senderId, true);
+        // ✅ Handle Text
+        if (event.message.text) {
+          const userMessage = event.message.text.trim().toLowerCase();
 
-        let reply;
-        if (/^menu$/i.test(userMessage)) reply = await commandMenu();
-        else if (/^advice$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/fun/advice?apikey=prince", "💭 Advice");
-        else if (/^pickupline$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/fun/pickupline?apikey=prince", "💌 Pickupline");
-        else if (/^quote$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/fun/quotes?apikey=prince", "💡 Quote");
-        else if (/^waifu$/i.test(userMessage)) {
-          const resImg = await fetch("https://api.princetechn.com/api/anime/waifu?apikey=prince");
-          const data = await resImg.json();
-          await sendImage(senderId, data.url || "https://i.waifu.pics/qkCL5Z5.jpg");
-          reply = "";
+          // ✅ Bot Intro
+          if (userMessage.includes("what is your name") || userMessage.includes("who are you")) {
+            return sendMessage(sender, "𝐀𝐦 𝐓𝐨𝐱𝐢𝐜 𝐋𝐨𝐯𝐞𝐫 𝐦𝐚𝐝𝐞 𝐛𝐲 𝐑𝐨𝐝𝐠𝐞𝐫𝐬");
+          }
+
+          // ✅ AI CMDs
+          if (userMessage.startsWith("gemini")) return sendMessage(sender, await fetchText(`https://aryanapi.up.railway.app/api/gemini?prompt=${encodeURIComponent(userMessage.replace("gemini", "").trim() || "Who is Rodgers Onyango")}`));
+          if (userMessage.startsWith("groq")) return sendMessage(sender, await fetchText(`https://aryanapi.up.railway.app/api/groq?q=${encodeURIComponent(userMessage.replace("groq", "").trim() || "Who is Rodgers Onyango")}`));
+          if (userMessage.startsWith("pawan")) return sendMessage(sender, await fetchText(`https://aryanapi.up.railway.app/api/pawan?prompt=${encodeURIComponent(userMessage.replace("pawan", "").trim() || "Who is Rodgers Onyango")}`));
+          if (userMessage.startsWith("openai")) return sendMessage(sender, await fetchText(`https://api.princetechn.com/api/ai/openai?apikey=prince&q=${encodeURIComponent(userMessage.replace("openai", "").trim() || "Who is Rodgers Onyango")}`));
+          if (userMessage.startsWith("mistral")) return sendMessage(sender, await fetchText(`https://aryanapi.up.railway.app/api/mistral?prompt=${encodeURIComponent(userMessage.replace("mistral", "").trim() || "Who is Rodgers Onyango")}`));
+          if (userMessage.startsWith("llama")) return sendMessage(sender, await fetchText(`https://aryanapi.up.railway.app/api/llama?prompt=${encodeURIComponent(userMessage.replace("llama", "").trim() || "Who is Rodgers Onyango")}`));
+          if (userMessage.startsWith("blackbox")) return sendMessage(sender, await fetchText(`https://aryanapi.up.railway.app/api/blackbox?prompt=${encodeURIComponent(userMessage.replace("blackbox", "").trim() || "Who is Rodgers Onyango")}`));
+          if (userMessage.startsWith("gauth")) return sendMessage(sender, await fetchText(`https://aryanapi.up.railway.app/api/gauth?prompt=${encodeURIComponent(userMessage.replace("gauth", "").trim() || "Who is Rodgers Onyango")}`));
+          if (userMessage.startsWith("weather")) return sendMessage(sender, await fetchText(`https://api.princetechn.com/api/search/weather?apikey=prince&location=${encodeURIComponent(userMessage.replace("weather", "").trim() || "Kisumu")}`));
+          if (userMessage.startsWith("spotifysearch")) return sendMessage(sender, await fetchText(`https://api.princetechn.com/api/search/spotifysearch?apikey=prince&query=${encodeURIComponent(userMessage.replace("spotifysearch", "").trim() || "Spectre")}`));
+          if (userMessage.startsWith("lyricsv2")) return sendMessage(sender, await fetchText(`https://aryanapi.up.railway.app/api/lyricsv2?query=${encodeURIComponent(userMessage.replace("lyricsv2", "").trim() || "Dusuma")}`));
+
+          // ✅ Menu
+          if (userMessage === "menu") {
+            return sendMessage(sender, `
+𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒 💻
+
+1️⃣ 𝐠𝐞𝐦𝐢𝐧𝐢 → gemini who is Rodgers Onyango
+2️⃣ 𝐠𝐫𝐨𝐪 → groq who is Rodgers Onyango
+3️⃣ 𝐩𝐚𝐰𝐚𝐧 → pawan who is Rodgers Onyango
+4️⃣ 𝐨𝐩𝐞𝐧𝐚𝐢 → openai who is Rodgers Onyango
+5️⃣ 𝐦𝐢𝐬𝐭𝐫𝐚𝐥 → mistral who is Rodgers Onyango
+6️⃣ 𝐥𝐥𝐚𝐦𝐚 → llama who is Rodgers Onyango
+7️⃣ 𝐛𝐥𝐚𝐜𝐤𝐛𝐨𝐱 → blackbox who is Rodgers Onyango
+8️⃣ 𝐠𝐚𝐮𝐭𝐡 → gauth who is Rodgers Onyango
+9️⃣ 𝐰𝐞𝐚𝐭𝐡𝐞𝐫 → weather Kisumu
+🔟 𝐬𝐩𝐨𝐭𝐢𝐟𝐲𝐬𝐞𝐚𝐫𝐜𝐡 → spotifysearch Spectre
+1️⃣1️⃣ 𝐥𝐲𝐫𝐢𝐜𝐬𝐯𝟐 → lyricsv2 Dusuma
+
+━━━━━━━━━━━━━━━━━━━
+𝐓𝐨𝐭𝐚𝐥 𝐧𝐨 𝐨𝐟 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐬: 11  
+𝐀𝐥𝐥 𝐭𝐡𝐞𝐬𝐞 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐬 𝐚𝐫𝐞 𝐛𝐫𝐨𝐮𝐠𝐡𝐭 𝐭𝐨 𝐲𝐨𝐮 𝐛𝐲 𝐒𝐢𝐫 𝐑𝐨𝐝𝐠𝐞𝐫𝐬  
+𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`);
+          }
+
+          // ✅ Fallback GPT
+          return sendMessage(sender, await fetchText(`https://api.princetechn.com/api/ai/openai?apikey=prince&q=${encodeURIComponent(userMessage)}`));
         }
-        else if (/^weather$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/search/weather?apikey=prince&location=Kisumu", "🌦 Weather");
-        else if (/^spotify$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/search/spotifysearch?apikey=prince&query=Spectre", "🎵 Spotify");
-        else if (/^lyrics$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/search/lyrics?apikey=prince&query=Dynasty+Miaa", "🎤 Lyrics");
-        else if (/^wikimedia$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/search/wikimedia?apikey=prince&title=Elon+Musk", "📚 Wikimedia");
-        else reply = await askPrinceAI(userMessage);
 
-        // Random human-like delay (1–3 seconds)
-        await delayTyping();
-
-        await callSendAPI(senderId, reply);
-        await sendTyping(senderId, false);
+        // ✅ Handle Attachments
+        if (event.message.attachments) {
+          const type = event.message.attachments[0].type;
+          if (type === "image") return sendMessage(sender, "𝐍𝐢𝐜𝐞 𝐏𝐢𝐜𝐭𝐮𝐫𝐞! 😍");
+          if (type === "audio") return sendMessage(sender, "𝐋𝐨𝐯𝐞𝐥𝐲 𝐕𝐨𝐢𝐜𝐞! 🎶");
+          if (type === "file") return sendMessage(sender, "𝐅𝐢𝐥𝐞 𝐑𝐞𝐜𝐞𝐢𝐯𝐞𝐝! 📁");
+          if (type === "video") return sendMessage(sender, "𝐂𝐨𝐨𝐥 𝐕𝐢𝐝𝐞𝐨! 🎥");
+          return sendMessage(sender, "𝐍𝐢𝐜𝐞 𝐒𝐭𝐢𝐜𝐤𝐞𝐫! 😅");
+        }
       }
     }
     res.sendStatus(200);
-  } else {
-    res.sendStatus(404);
-  }
+  } else res.sendStatus(404);
 });
 
-// ✅ GPT AI Fallback
-async function askPrinceAI(message) {
-  try {
-    const url = `https://api.princetechn.com/api/ai/openai?apikey=prince&q=${encodeURIComponent(message)}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.response || data.result || "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑";
-  } catch {
-    return "⚠️ Error reaching AI server";
-  }
-}
-
-// ✅ Fetch plain text
-async function getPlain(url, label) {
+// ✅ Helper Functions
+async function fetchText(url) {
   try {
     const res = await fetch(url);
     const data = await res.json();
-    const text =
-      data.result || data.response || data.advice || data.quote || data.lyrics || data.message || JSON.stringify(data);
-    return `${label}: ${text}`;
+    return `𝐋 ${data.result || data.answer || data.response || JSON.stringify(data)}`;
   } catch {
-    return `⚠️ Failed to fetch ${label}`;
+    return "𝐋 Error fetching data.";
   }
 }
 
-// ✅ Delay to simulate typing
-function delayTyping() {
-  return new Promise((resolve) => {
-    const delay = Math.floor(Math.random() * 2000) + 1000; // 1–3 seconds
-    setTimeout(resolve, delay);
-  });
-}
-
-// ✅ Send text message (with footer)
-async function callSendAPI(senderPsid, response) {
-  const footer = response
-    ? `\n\nType Menu to see cmds\n━━━━━━━━━━━━━━━\nᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴏʏ4`
-    : "";
-  const body = {
-    recipient: { id: senderPsid },
-    message: { text: (response || "") + footer },
-  };
-  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+async function sendMessage(sender, text) {
+  await fetch(`https://graph.facebook.com/v17.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ recipient: { id: sender }, message: { text } }),
   });
 }
 
-// ✅ Send image
-async function sendImage(senderPsid, imageUrl) {
-  const bodyImg = {
-    recipient: { id: senderPsid },
-    message: { attachment: { type: "image", payload: { url: imageUrl, is_reusable: true } } },
-  };
-  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+async function sendTyping(sender) {
+  await fetch(`https://graph.facebook.com/v17.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(bodyImg),
-  });
-  await callSendAPI(senderPsid, "");
-}
-
-// ✅ Typing indicator toggle
-async function sendTyping(senderPsid, isTyping) {
-  const body = {
-    recipient: { id: senderPsid },
-    sender_action: isTyping ? "typing_on" : "typing_off",
-  };
-  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ recipient: { id: sender }, sender_action: "typing_on" }),
   });
 }
 
-// ✅ Menu with motivational quote
-async function commandMenu() {
-  let quote = "";
-  try {
-    const res = await fetch("https://api.princetechn.com/api/fun/quotes?apikey=prince");
-    const data = await res.json();
-    quote = `\n💡 Quote: ${data.quote || data.result || "Stay motivated!"}`;
-  } catch {
-    quote = "\n💡 Quote: Stay motivated!";
-  }
-
-  return `➤ 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐂𝐌𝐃𝐒  
-
-💝 𝗔𝗖𝗧𝗜𝗩𝗘 𝗖𝗠𝗗𝗦  
-💭 Advice  
-💌 Pickupline  
-💡 Quote  
-🐾 Waifu  
-🌦 Weather  
-🎵 Spotify  
-🎤 Lyrics  
-📚 Wikimedia  
-
-━━━━━━━━━━━━━━━${quote}`;
-}
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🔥 Toxic Lover running on port ${PORT}`));
+app.listen(process.env.PORT || 3000, () => console.log("✅ Toxic Lover Bot Running with Attachments Support"));
