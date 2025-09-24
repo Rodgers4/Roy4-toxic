@@ -1,129 +1,135 @@
+// server.js
 import express from "express";
-import bodyParser from "body-parser";
 import fetch from "node-fetch";
 
 const app = express();
-app.use(bodyParser.json());
+app.use(express.json());
 
-// ✅ Facebook Tokens
-const PAGE_ACCESS_TOKEN = "EAAT0TVvmUIYBPFRyZAYWtZCppUrjygNmuBwglLZBhgNTtVtdkeAh0hmc0bqiQbv2kGyhSJvfpGXeWpZArydfcFy3lDOBId7VZCWkwSIMOPhilSWaJJ8JjJbETKZBjX1tVUoope98ZAhZBCSHsxsZC638DTgi2uAt6ImPS40g1Henc9jwVyvMTzPIkBK1SwgX9ljl2ChU95EZAtUAZDZD";
-const VERIFY_TOKEN = "rodgers4";
+// Messenger tokens (INLINE)
+const VERIFY_TOKEN = "Rodgers4";
+const PAGE_ACCESS_TOKEN = "EAAU7cBW7QjkBPOAa7cUMw5ZALBeqNfjYhpyxm86o0yRR7n7835SIv5YHVxsyKozKgZAltZCo0GiPK4ZBrIMX2Ym7PTHtdfrf25xDnp4S2PogGVnDxBftFunycaHgsmvtmrV90sEHHNNgmn4oxa4pI27ThWZBdvosEqGokHs1ZCDXZAduFVF9aQ01m2wgZAZBZC01KB0CYeOZAHc5wZDZD";
 
 // ✅ Verify Webhook
 app.get("/webhook", (req, res) => {
-  if (req.query["hub.mode"] === "subscribe" && req.query["hub.verify_token"] === VERIFY_TOKEN) {
-    console.log("✅ Webhook Verified");
-    return res.status(200).send(req.query["hub.challenge"]);
-  }
-  res.sendStatus(403);
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+  if (mode && token === VERIFY_TOKEN) res.status(200).send(challenge);
+  else res.sendStatus(403);
 });
 
-// ✅ Webhook POST
+// ✅ Handle Messages
 app.post("/webhook", async (req, res) => {
-  const body = req.body;
-  if (body.object === "page") {
-    for (const entry of body.entry) {
+  if (req.body.object === "page") {
+    for (const entry of req.body.entry) {
       const event = entry.messaging[0];
-      const sender = event.sender.id;
+      const senderId = event.sender.id;
 
-      if (event.message) {
-        await sendTyping(sender);
+      if (event.message && event.message.text) {
+        const userMessage = event.message.text.trim();
 
-        if (event.message.text) {
-          const userMessage = event.message.text.trim().toLowerCase();
+        // Show typing indicator
+        await sendTyping(senderId, true);
 
-          // ✅ Bot Intro
-          if (userMessage.includes("what is your name") || userMessage.includes("who are you")) {
-            return sendMessage(sender, "𝐋 𝐀𝐦 𝐓𝐨𝐱𝐢𝐜 𝐋𝐨𝐯𝐞𝐫, 𝐌𝐚𝐝𝐞 𝐁𝐲 𝐑𝐨𝐝𝐠𝐞𝐫𝐬");
-          }
+        let reply;
+        const lower = userMessage.toLowerCase();
 
-          // ✅ AI CMDs
-          if (userMessage.startsWith("gemini")) return sendMessage(sender, await fetchClean(`https://aryanapi.up.railway.app/api/gemini?prompt=${encodeURIComponent(userMessage.replace("gemini", "").trim() || "Who is Rodgers Onyango")}`));
-          if (userMessage.startsWith("groq")) return sendMessage(sender, await fetchClean(`https://aryanapi.up.railway.app/api/groq?q=${encodeURIComponent(userMessage.replace("groq", "").trim() || "Who is Rodgers Onyango")}`));
-          if (userMessage.startsWith("pawan")) return sendMessage(sender, await fetchClean(`https://aryanapi.up.railway.app/api/pawan?prompt=${encodeURIComponent(userMessage.replace("pawan", "").trim() || "Who is Rodgers Onyango")}`));
-          if (userMessage.startsWith("openai")) return sendMessage(sender, await fetchClean(`https://api.princetechn.com/api/ai/openai?apikey=prince&q=${encodeURIComponent(userMessage.replace("openai", "").trim() || "Who is Rodgers Onyango")}`));
-          if (userMessage.startsWith("mistral")) return sendMessage(sender, await fetchClean(`https://aryanapi.up.railway.app/api/mistral?prompt=${encodeURIComponent(userMessage.replace("mistral", "").trim() || "Who is Rodgers Onyango")}`));
-          if (userMessage.startsWith("llama")) return sendMessage(sender, await fetchClean(`https://aryanapi.up.railway.app/api/llama?prompt=${encodeURIComponent(userMessage.replace("llama", "").trim() || "Who is Rodgers Onyango")}`));
-          if (userMessage.startsWith("blackbox")) return sendMessage(sender, await fetchClean(`https://aryanapi.up.railway.app/api/blackbox?prompt=${encodeURIComponent(userMessage.replace("blackbox", "").trim() || "Who is Rodgers Onyango")}`));
-          if (userMessage.startsWith("gauth")) return sendMessage(sender, await fetchClean(`https://aryanapi.up.railway.app/api/gauth?prompt=${encodeURIComponent(userMessage.replace("gauth", "").trim() || "Who is Rodgers Onyango")}`));
-          if (userMessage.startsWith("weather")) return sendMessage(sender, await fetchClean(`https://api.princetechn.com/api/search/weather?apikey=prince&location=${encodeURIComponent(userMessage.replace("weather", "").trim() || "Kisumu")}`));
-          if (userMessage.startsWith("spotifysearch")) return sendMessage(sender, await fetchClean(`https://api.princetechn.com/api/search/spotifysearch?apikey=prince&query=${encodeURIComponent(userMessage.replace("spotifysearch", "").trim() || "Spectre")}`));
-          if (userMessage.startsWith("lyricsv2")) return sendMessage(sender, await fetchClean(`https://aryanapi.up.railway.app/api/lyricsv2?query=${encodeURIComponent(userMessage.replace("lyricsv2", "").trim() || "Dusuma")}`));
+        // ✅ AI Commands
+        if (lower.startsWith("gemini")) reply = await getPlain(`https://aryanapi.up.railway.app/api/gemini?prompt=${encodeURIComponent(lower.replace("gemini","").trim()||"Who is Rodgers Onyango")}`, "🤖 Gemini");
+        else if (lower.startsWith("groq")) reply = await getPlain(`https://aryanapi.up.railway.app/api/groq?q=${encodeURIComponent(lower.replace("groq","").trim()||"Who is Rodgers Onyango")}`, "⚡ Groq");
+        else if (lower.startsWith("pawan")) reply = await getPlain(`https://aryanapi.up.railway.app/api/pawan?prompt=${encodeURIComponent(lower.replace("pawan","").trim()||"Who is Rodgers Onyango")}`, "💡 Pawan");
+        else if (lower.startsWith("mistral")) reply = await getPlain(`https://aryanapi.up.railway.app/api/mistral?prompt=${encodeURIComponent(lower.replace("mistral","").trim()||"Who is Rodgers Onyango")}`, "🌪 Mistral");
+        else if (lower.startsWith("llama")) reply = await getPlain(`https://aryanapi.up.railway.app/api/llama?prompt=${encodeURIComponent(lower.replace("llama","").trim()||"Who is Rodgers Onyango")}`, "🦙 LLaMA");
+        else if (lower.startsWith("blackbox")) reply = await getPlain(`https://aryanapi.up.railway.app/api/blackbox?prompt=${encodeURIComponent(lower.replace("blackbox","").trim()||"Who is Rodgers Onyango")}`, "🖤 Blackbox");
+        else if (lower.startsWith("gauth")) reply = await getPlain(`https://aryanapi.up.railway.app/api/gauth?prompt=${encodeURIComponent(lower.replace("gauth","").trim()||"Who is Rodgers Onyango")}`, "📚 Gauth");
+        else if (lower.startsWith("openai")) reply = await getPlain(`https://api.princetechn.com/api/ai/openai?apikey=prince&q=${encodeURIComponent(lower.replace("openai","").trim()||"Who is Rodgers Onyango")}`, "🔷 OpenAI");
+        else if (lower.startsWith("weather")) reply = await getPlain("https://api.princetechn.com/api/search/weather?apikey=prince&location=Kisumu", "🌦 Weather");
+        else if (lower.startsWith("spotifysearch")) reply = await getPlain("https://api.princetechn.com/api/search/spotifysearch?apikey=prince&query=Spectre", "🎵 Spotify");
+        else if (lower.startsWith("lyricsv2")) reply = await getPlain("https://aryanapi.up.railway.app/api/lyricsv2?query=Dusuma", "🎤 Lyrics");
 
-          // ✅ Menu
-          if (userMessage === "menu") {
-            return sendMessage(sender, `
-╭━━━⌬ 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒 ⌬━━━╮
+        // ✅ Menu
+        else if (lower === "menu") reply = await commandMenu();
 
-🧠 𝐀𝐈 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬  
-gemini who is Rodgers Onyango  
-groq who is Rodgers Onyango  
-pawan who is Rodgers Onyango  
-openai who is Rodgers Onyango  
-mistral who is Rodgers Onyango  
-llama who is Rodgers Onyango  
-blackbox who is Rodgers Onyango  
-gauth who is Rodgers Onyango  
+        // ✅ Fallback GPT
+        else reply = await askPrinceAI(userMessage);
 
-🎶 𝐄𝐧𝐭𝐞𝐫𝐭𝐚𝐢𝐧𝐦𝐞𝐧𝐭  
-lyricsv2 Dusuma  
-spotifysearch Spectre  
-
-🌦 𝐔𝐭𝐢𝐥𝐬  
-weather Kisumu  
-
-━━━━━━━━━━━━━━━━━━━
-𝐓𝐨𝐭𝐚𝐥 𝐧𝐨 𝐨𝐟 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐬: 11  
-𝐀𝐥𝐥 𝐭𝐡𝐞𝐬𝐞 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐬 𝐚𝐫𝐞 𝐛𝐫𝐨𝐮𝐠𝐡𝐭 𝐭𝐨 𝐲𝐨𝐮 𝐛𝐲 𝐒𝐢𝐫 𝐑𝐨𝐝𝐠𝐞𝐫𝐬  
-𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`);
-          }
-
-          // ✅ Fallback GPT
-          return sendMessage(sender, await fetchClean(`https://api.princetechn.com/api/ai/openai?apikey=prince&q=${encodeURIComponent(userMessage)}`));
-        }
-
-        // ✅ Handle Attachments
-        if (event.message.attachments) {
-          const type = event.message.attachments[0].type;
-          if (type === "image") return sendMessage(sender, "𝐋 𝐍𝐢𝐜𝐞 𝐏𝐢𝐜𝐭𝐮𝐫𝐞! 😍");
-          if (type === "audio") return sendMessage(sender, "𝐋 𝐋𝐨𝐯𝐞𝐥𝐲 𝐕𝐨𝐢𝐜𝐞! 🎶");
-          if (type === "file") return sendMessage(sender, "𝐋 𝐅𝐢𝐥𝐞 𝐑𝐞𝐜𝐞𝐢𝐯𝐞𝐝! 📁");
-          if (type === "video") return sendMessage(sender, "𝐋 𝐂𝐨𝐨𝐥 𝐕𝐢𝐝𝐞𝐨! 🎥");
-          return sendMessage(sender, "𝐋 𝐍𝐢𝐜𝐞 𝐒𝐭𝐢𝐜𝐤𝐞𝐫! 😅");
-        }
+        // Delay like human typing
+        await delayTyping();
+        await callSendAPI(senderId, `𝐋 ${reply}`);
+        await sendTyping(senderId, false);
       }
     }
     res.sendStatus(200);
   } else res.sendStatus(404);
 });
 
-// ✅ Helper Functions
-async function fetchClean(url) {
+// ✅ AI Fallback
+async function askPrinceAI(message) {
   try {
-    const res = await fetch(url);
+    const res = await fetch(`https://api.princetechn.com/api/ai/openai?apikey=prince&q=${encodeURIComponent(message)}`);
     const data = await res.json();
-
-    // ✅ Return first text-like value
-    return `𝐋 ${data.result || data.answer || data.response || data.message || JSON.stringify(data)}`;
+    return data.result || data.response || data.answer || "𝐋 No response.";
   } catch {
-    return "𝐋 Error fetching data.";
+    return "𝐋 AI server error.";
   }
 }
 
-async function sendMessage(sender, text) {
-  await fetch(`https://graph.facebook.com/v17.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+// ✅ Fetch plain text response
+async function getPlain(url, label) {
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const text = data.result || data.response || data.answer || data.message || JSON.stringify(data);
+    return `${label}: ${text}`;
+  } catch {
+    return `${label}: Failed to fetch data.`;
+  }
+}
+
+// ✅ Menu
+async function commandMenu() {
+  return `𝐋 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒 💻  
+
+1️⃣ gemini → gemini who is Rodgers Onyango  
+2️⃣ groq → groq who is Rodgers Onyango  
+3️⃣ pawan → pawan who is Rodgers Onyango  
+4️⃣ mistral → mistral who is Rodgers Onyango  
+5️⃣ llama → llama who is Rodgers Onyango  
+6️⃣ blackbox → blackbox who is Rodgers Onyango  
+7️⃣ gauth → gauth who is Rodgers Onyango  
+8️⃣ openai → openai who is Rodgers Onyango  
+9️⃣ weather → weather Kisumu  
+🔟 spotifysearch → spotifysearch Spectre  
+1️⃣1️⃣ lyricsv2 → lyricsv2 Dusuma  
+
+━━━━━━━━━━━━━━━━━━━  
+𝐓𝐨𝐭𝐚𝐥 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬: 11  
+𝐀𝐥𝐥 𝐛𝐫𝐨𝐮𝐠𝐡𝐭 𝐭𝐨 𝐲𝐨𝐮 𝐛𝐲 𝐒𝐢𝐫 𝐑𝐨𝐝𝐠𝐞𝐫𝐬  
+𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
+}
+
+// ✅ Typing toggle
+async function sendTyping(sender, isTyping) {
+  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recipient: { id: sender }, sender_action: isTyping ? "typing_on" : "typing_off" }),
+  });
+}
+
+// ✅ Simulated delay
+function delayTyping() {
+  return new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 1000));
+}
+
+// ✅ Send message
+async function callSendAPI(sender, text) {
+  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ recipient: { id: sender }, message: { text } }),
   });
 }
 
-async function sendTyping(sender) {
-  await fetch(`https://graph.facebook.com/v17.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ recipient: { id: sender }, sender_action: "typing_on" }),
-  });
-}
-
-app.listen(process.env.PORT || 3000, () => console.log("✅ Toxic Lover Bot Running with AI + Attachments"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🔥 Toxic Lover running on port ${PORT}`));
