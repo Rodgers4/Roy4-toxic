@@ -6,20 +6,28 @@ const axios = require("axios");
 const app = express();
 app.use(bodyParser.json());
 
+// ✅ Hardcoded Tokens
 const PAGE_ACCESS_TOKEN = "EAAP7Izjhq2MBPm9ON3C2JkZADwoXZA39s5Un5qWamD6hzGBBgKx6E1h7NsBhJZBiwYMTsWJXZCST5yJAuwllII9jFfFYRQ0l67DeSmeJjpwXCiGqRubqZANsNlzVcis8iikTLxJU4hZA8PaWpPu167N6EdQRC5ez1ZCb2YmV1qq8rwu2PFDeAZAlFZAkk5vQnpuxooS2iZABCR1gZDZD";
 const VERIFY_TOKEN = "Rodgers4";
+
 const history = new Map();
 
-const BOLD = t => t.replace(/\*\*(.+?)\*\*/g, (_, w) =>
-  [...w].map(c =>
-    String.fromCodePoint(
-      /[a-z]/.test(c) ? 0x1D41A + c.charCodeAt() - 97 :
-      /[A-Z]/.test(c) ? 0x1D400 + c.charCodeAt() - 65 :
-      /[0-9]/.test(c) ? 0x1D7CE + c.charCodeAt() - 48 :
-      c.charCodeAt()
-    )
-  ).join('')
-);
+const BOLD = t =>
+  t.replace(/\*\*(.+?)\*\*/g, (_, w) =>
+    [...w]
+      .map(c =>
+        String.fromCodePoint(
+          /[a-z]/.test(c)
+            ? 0x1D41A + c.charCodeAt() - 97
+            : /[A-Z]/.test(c)
+            ? 0x1D400 + c.charCodeAt() - 65
+            : /[0-9]/.test(c)
+            ? 0x1D7CE + c.charCodeAt() - 48
+            : c.charCodeAt()
+        )
+      )
+      .join("")
+  );
 
 // ✅ Messenger Verify Webhook
 app.get("/webhook", (req, res) => {
@@ -56,19 +64,21 @@ app.post("/webhook", async (req, res) => {
 async function handleLorna(senderId, userMessage) {
   const convo = history.get(senderId) || [];
   const ask = [...convo, { role: "user", content: userMessage }]
-    .map(m => `${m.role}: ${m.content}`).join("\n");
+    .map(m => `${m.role}: ${m.content}`)
+    .join("\n");
 
   try {
     let customReply;
 
     if (/what is your name|who are you/i.test(userMessage)) {
-      customReply = "Am Lorna Ai, made by the most young talented and brilliant Sir Rodgers, to be part of their modern projects.";
+      customReply =
+        "Am Lorna Ai, made by the most young talented and brilliant Sir Rodgers, to be part of their modern projects.";
     } else if (/who is rodgers|tell me about rodgers/i.test(userMessage)) {
       const facts = [
         "Rodgers Onyango is a brilliant young tech mind from Kisumu, Kenya, passionate about building modern solutions.",
         "Rodgers Onyango is a visionary innovator from Kisumu, Kenya, who inspires others through tech projects.",
         "Rodgers Onyango is a smart and focused creator from Kisumu, Kenya, determined to uplift his family's life.",
-        "Rodgers Onyango is a young Kenyan techie from Kisumu with a dream to change the future through technology."
+        "Rodgers Onyango is a young Kenyan techie from Kisumu with a dream to change the future through technology.",
       ];
       customReply = facts[Math.floor(Math.random() * facts.length)];
     }
@@ -77,16 +87,25 @@ async function handleLorna(senderId, userMessage) {
     if (customReply) {
       replyText = customReply;
     } else {
-      const { data } = await axios.get("https://api.princetechn.com/api/ai/openai", {
-        params: { apikey: "prince", q: ask }
-      });
-      replyText = data?.response || data?.result || "I couldn't find a good answer.";
+      const { data } = await axios.get(
+        "https://api.princetechn.com/api/ai/openai",
+        {
+          params: { apikey: "prince", q: ask },
+        }
+      );
+      replyText =
+        data?.response || data?.result || "I couldn't find a good answer.";
     }
 
-    const finalResponse = `𝐋𝐎𝐑𝐍𝐀\n${BOLD(replyText)}\n━━━━━━━━━━━━━━━\n𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
+    const finalResponse = `𝐋𝐎𝐑𝐍𝐀\n${BOLD(
+      replyText
+    )}\n━━━━━━━━━━━━━━━\n𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
 
     await callSendAPI(senderId, finalResponse);
-    history.set(senderId, [...convo, { role: "user", content: userMessage }, { role: "assistant", content: replyText }].slice(-10));
+    history.set(
+      senderId,
+      [...convo, { role: "user", content: userMessage }, { role: "assistant", content: replyText }].slice(-10)
+    );
   } catch (err) {
     console.error("Lorna AI error:", err.message);
     await callSendAPI(senderId, "⚠️ Lorna AI error.");
@@ -99,7 +118,7 @@ async function callSendAPI(senderPsid, messageText) {
     `https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
     {
       recipient: { id: senderPsid },
-      message: { text: messageText }
+      message: { text: messageText },
     },
     { headers: { "Content-Type": "application/json" } }
   );
