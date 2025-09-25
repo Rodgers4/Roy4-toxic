@@ -2,7 +2,6 @@ const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 const history = new Map();
 
-// ✅ Add your tokens here
 const PAGE_ACCESS_TOKEN = "EAAP7Izjhq2MBPm9ON3C2JkZADwoXZA39s5Un5qWamD6hzGBBgKx6E1h7NsBhJZBiwYMTsWJXZCST5yJAuwllII9jFfFYRQ0l67DeSmeJjpwXCiGqRubqZANsNlzVcis8iikTLxJU4hZA8PaWpPu167N6EdQRC5ez1ZCb2YmV1qq8rwu2PFDeAZAlFZAkk5vQnpuxooS2iZABCR1gZDZD";
 const VERIFY_TOKEN = "Rodgers4";
 
@@ -35,7 +34,6 @@ module.exports = {
     try {
       let customReply;
 
-      // ✅ Special custom responses
       if (/what is your name|who are you/i.test(q)) {
         customReply = "Am Lorna Ai, made by the most young talented and brilliant Sir Rodgers, to be part of their modern projects.";
       } else if (/who is rodgers|tell me about rodgers/i.test(q)) {
@@ -49,11 +47,9 @@ module.exports = {
       }
 
       let replyText;
-
       if (customReply) {
         replyText = customReply;
       } else {
-        // ✅ Prince AI as main backend
         const { data } = await axios.get("https://api.princetechn.com/api/ai/openai", {
           params: { apikey: "prince", q: ask }
         });
@@ -71,6 +67,5 @@ module.exports = {
   }
 };
 
-// Export tokens for webhook use
 module.exports.PAGE_ACCESS_TOKEN = PAGE_ACCESS_TOKEN;
 module.exports.VERIFY_TOKEN = VERIFY_TOKEN;
