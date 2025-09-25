@@ -1,175 +1,76 @@
-// server.js
-import express from "express";
-import fetch from "node-fetch";
+const axios = require('axios');
+const { sendMessage } = require('../handles/sendMessage');
+const history = new Map();
 
-const app = express();
-app.use(express.json());
-
-// Messenger tokens (INLINE, no .env)
-const VERIFY_TOKEN = "Rodgers4";
+// ✅ Add your tokens here
 const PAGE_ACCESS_TOKEN = "EAAP7Izjhq2MBPm9ON3C2JkZADwoXZA39s5Un5qWamD6hzGBBgKx6E1h7NsBhJZBiwYMTsWJXZCST5yJAuwllII9jFfFYRQ0l67DeSmeJjpwXCiGqRubqZANsNlzVcis8iikTLxJU4hZA8PaWpPu167N6EdQRC5ez1ZCb2YmV1qq8rwu2PFDeAZAlFZAkk5vQnpuxooS2iZABCR1gZDZD";
+const VERIFY_TOKEN = "Rodgers4";
 
-// ✅ Verify Webhook
-app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-  if (mode && token === VERIFY_TOKEN) {
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
-  }
-});
+const BOLD = t => t.replace(/\*\*(.+?)\*\*/g, (_, w) =>
+  [...w].map(c =>
+    String.fromCodePoint(
+      /[a-z]/.test(c) ? 0x1D41A + c.charCodeAt() - 97 :
+      /[A-Z]/.test(c) ? 0x1D400 + c.charCodeAt() - 65 :
+      /[0-9]/.test(c) ? 0x1D7CE + c.charCodeAt() - 48 :
+      c.charCodeAt()
+    )
+  ).join('')
+);
 
-// ✅ Handle Messages
-app.post("/webhook", async (req, res) => {
-  if (req.body.object === "page") {
-    for (const entry of req.body.entry) {
-      const event = entry.messaging[0];
-      const senderId = event.sender.id;
+module.exports = {
+  name: 'lorna',
+  description: 'Talk to Lorna AI',
+  usage: 'lorna [question]',
+  author: 'Rodgers Onyango',
 
-      if (event.message && event.message.text) {
-        const userMessage = event.message.text.trim();
+  async execute(id, args, token = PAGE_ACCESS_TOKEN, e) {
+    if (!e) return sendMessage(id, { text: '❗ Failed.' }, token);
+    const q = args.join(' ').trim();
+    if (!q) return sendMessage(id, { text: '💬 Ask me anything.' }, token);
 
-        // Start typing
-        await sendTyping(senderId, true);
+    const convo = history.get(id) || [];
+    const ask = [...convo, { role: 'user', content: q }]
+      .map(m => `${m.role}: ${m.content}`).join('\n');
 
-        let reply;
-        if (/^menu$/i.test(userMessage)) reply = await commandMenu();
-        else if (/^advice$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/fun/advice?apikey=prince", "💭 Advice");
-        else if (/^pickupline$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/fun/pickupline?apikey=prince", "💌 Pickupline");
-        else if (/^quote$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/fun/quotes?apikey=prince", "💡 Quote");
-        else if (/^waifu$/i.test(userMessage)) {
-          const resImg = await fetch("https://api.princetechn.com/api/anime/waifu?apikey=prince");
-          const data = await resImg.json();
-          await sendImage(senderId, data.url || "https://i.waifu.pics/qkCL5Z5.jpg");
-          reply = "";
-        }
-        else if (/^weather$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/search/weather?apikey=prince&location=Kisumu", "🌦 Weather");
-        else if (/^spotify$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/search/spotifysearch?apikey=prince&query=Spectre", "🎵 Spotify");
-        else if (/^lyrics$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/search/lyrics?apikey=prince&query=Dynasty+Miaa", "🎤 Lyrics");
-        else if (/^wikimedia$/i.test(userMessage)) reply = await getPlain("https://api.princetechn.com/api/search/wikimedia?apikey=prince&title=Elon+Musk", "📚 Wikimedia");
-        else reply = await askPrinceAI(userMessage);
+    try {
+      let customReply;
 
-        // Random human-like delay (1–3 seconds)
-        await delayTyping();
-
-        await callSendAPI(senderId, reply);
-        await sendTyping(senderId, false);
+      // ✅ Special custom responses
+      if (/what is your name|who are you/i.test(q)) {
+        customReply = "Am Lorna Ai, made by the most young talented and brilliant Sir Rodgers, to be part of their modern projects.";
+      } else if (/who is rodgers|tell me about rodgers/i.test(q)) {
+        const facts = [
+          "Rodgers Onyango is a brilliant young tech mind from Kisumu, Kenya, passionate about building modern solutions.",
+          "Rodgers Onyango is a visionary innovator from Kisumu, Kenya, who inspires others through tech projects.",
+          "Rodgers Onyango is a smart and focused creator from Kisumu, Kenya, determined to uplift his family's life.",
+          "Rodgers Onyango is a young Kenyan techie from Kisumu with a dream to change the future through technology."
+        ];
+        customReply = facts[Math.floor(Math.random() * facts.length)];
       }
+
+      let replyText;
+
+      if (customReply) {
+        replyText = customReply;
+      } else {
+        // ✅ Prince AI as main backend
+        const { data } = await axios.get("https://api.princetechn.com/api/ai/openai", {
+          params: { apikey: "prince", q: ask }
+        });
+        replyText = data?.response || data?.result || "I couldn't find a good answer.";
+      }
+
+      const finalResponse = `𝐋𝐎𝐑𝐍𝐀\n${BOLD(replyText)}\n━━━━━━━━━━━━━━━\n𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`;
+
+      sendMessage(id, { text: finalResponse }, token);
+      history.set(id, [...convo, { role: 'user', content: q }, { role: 'assistant', content: replyText }].slice(-10));
+    } catch (err) {
+      console.error("Lorna AI error:", err.message);
+      sendMessage(id, { text: '⚠️ Lorna AI error.' }, token);
     }
-    res.sendStatus(200);
-  } else {
-    res.sendStatus(404);
   }
-});
+};
 
-// ✅ GPT AI Fallback
-async function askPrinceAI(message) {
-  try {
-    const url = `https://api.princetechn.com/api/ai/openai?apikey=prince&q=${encodeURIComponent(message)}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.response || data.result || "💙 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑";
-  } catch {
-    return "⚠️ Error reaching AI server";
-  }
-}
-
-// ✅ Fetch plain text
-async function getPlain(url, label) {
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    const text =
-      data.result || data.response || data.advice || data.quote || data.lyrics || data.message || JSON.stringify(data);
-    return `${label}: ${text}`;
-  } catch {
-    return `⚠️ Failed to fetch ${label}`;
-  }
-}
-
-// ✅ Delay to simulate typing
-function delayTyping() {
-  return new Promise((resolve) => {
-    const delay = Math.floor(Math.random() * 2000) + 1000; // 1–3 seconds
-    setTimeout(resolve, delay);
-  });
-}
-
-// ✅ Send text message (with footer + real time/date)
-async function callSendAPI(senderPsid, response) {
-  // Generate real time & date
-  const now = new Date();
-  const timeString = now.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" });
-  const dateString = now.toLocaleDateString("en-KE", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
-
-  const footer = response
-    ? `\n\n🕒 Time: ${timeString} | 📅 Date: ${dateString}\n━━━━━━━━━━━━━━━\nType "menu" to see my commands\n𝐏𝐎𝐖𝐄𝐑𝐄𝐃 𝐁𝐘 𝐑𝐎𝐘𝐓𝐄𝐂𝐇`
-    : "";
-  const body = {
-    recipient: { id: senderPsid },
-    message: { text: (response || "") + footer },
-  };
-  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-// ✅ Send image
-async function sendImage(senderPsid, imageUrl) {
-  const bodyImg = {
-    recipient: { id: senderPsid },
-    message: { attachment: { type: "image", payload: { url: imageUrl, is_reusable: true } } },
-  };
-  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(bodyImg),
-  });
-  await callSendAPI(senderPsid, "");
-}
-
-// ✅ Typing indicator toggle
-async function sendTyping(senderPsid, isTyping) {
-  const body = {
-    recipient: { id: senderPsid },
-    sender_action: isTyping ? "typing_on" : "typing_off",
-  };
-  await fetch(`https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-// ✅ Menu with motivational quote
-async function commandMenu() {
-  let quote = "";
-  try {
-    const res = await fetch("https://api.princetechn.com/api/fun/quotes?apikey=prince");
-    const data = await res.json();
-    quote = `\n💡 Quote: ${data.quote || data.result || "Stay motivated!"}`;
-  } catch {
-    quote = "\n💡 Quote: Stay motivated!";
-  }
-
-  return `➤ 𝐓𝐎𝐗𝐈𝐂 𝐋𝐎𝐕𝐄𝐑 𝐂𝐌𝐃𝐒
-
-💝 𝗔𝗖𝗧𝗜𝗩𝗘 𝗖𝗠𝗗𝗦
-💭 Advice
-💌 Pickupline
-💡 Quote
-🐾 Waifu
-🌦 Weather
-🎵 Spotify
-🎤 Lyrics
-📚 Wikimedia
-
-━━━━━━━━━━━━━━━${quote}`;
-}
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🔥 Toxic Lover running on port ${PORT}`));
+// Export tokens for webhook use
+module.exports.PAGE_ACCESS_TOKEN = PAGE_ACCESS_TOKEN;
+module.exports.VERIFY_TOKEN = VERIFY_TOKEN;
