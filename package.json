@@ -1,15 +1,16 @@
 {
-  "name": "toxic-lover-bot",
+  "name": "lorna-ai-bot",
   "version": "1.0.0",
-  "description": "Facebook Messenger bot named Toxic Lover 💕 powered by GPT and Rodgers.",
+  "description": "Messenger bot powered by Lorna AI",
   "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "node-fetch": "^3.3.2",
-    "body-parser": "^1.20.2"
+    "axios": "^1.7.4",
+    "body-parser": "^1.20.2",
+    "express": "^4.18.3",
+    "node-fetch": "^3.3.2"
   }
 }
