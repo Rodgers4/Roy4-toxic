@@ -1,16 +1,19 @@
 {
-  "name": "lorna-ai-bot",
+  "name": "lorna-bot",
   "version": "1.0.0",
-  "description": "Messenger bot powered by Lorna AI",
+  "description": "Messenger bot powered by Lorna AI (Made by Rodgers Onyango)",
   "main": "server.js",
-  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "axios": "^1.7.4",
+    "axios": "^1.6.8",
     "body-parser": "^1.20.2",
-    "express": "^4.18.3",
-    "node-fetch": "^3.3.2"
-  }
+    "express": "^4.18.3"
+  },
+  "engines": {
+    "node": ">=18.x"
+  },
+  "license": "MIT",
+  "author": "Rodgers Onyango"
 }
