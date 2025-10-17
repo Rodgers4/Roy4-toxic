@@ -1,5 +1,5 @@
 // server.js
-const express = require("express");
+cons");
 const bodyParser = require("body-parser");
 const axios = require("axios");
 
@@ -7,8 +7,8 @@ const app = express();
 app.use(bodyParser.json());
 
 // Hardcoded Tokens
-const PAGE_ACCESS_TOKEN = "EAAP7Izjhq2MBPm9ON3C2JkZADwoXZA39s5Un5qWamD6hzGBBgKx6E1h7NsBhJZBiwYMTsWJXZCST5yJAuwllII9jFfFYRQ0l67DeSmeJjpwXCiGqRubqZANsNlzVcis8iikTLxJU4hZA8PaWpPu167N6EdQRC5ez1ZCb2YmV1qq8rwu2PFDeAZAlFZAkk5vQnpuxooS2iZABCR1gZDZD";
-const VERIFY_TOKEN = "Rodgers4";
+const PAGE_ACCESS_TOKENn5qWamD6hzGBBgKx6E1h7NsBhJZBiwYMTsWJXZCST5yJAuwllII9jFfFYRQ0l67DeSmeJjpwXCiGqRubqZANsNlzVcis8iikTLxJU4hZA8PaWpPu167N6EdQRC5ez1ZCb2YmV1qq8rwu2PFDeAZAlFZAkk5vQnpuxooS2iZABCR1gZDZD";
+const VERIFY_TOKEN = "Ro";
 
 const history = new Map();
 
@@ -88,7 +88,7 @@ async function handleLorna(senderId, userMessage) {
 // ✅ Send Message
 async function callSendAPI(senderPsid, messageText) {
   await axios.post(
-    `https://graph.facebook.com/v16.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+    `https://graph.facebccess_token=${PAGE_ACCESS_TOKEN}`,
     {
       recipient: { id: senderPsid },
       message: { text: messageText }
@@ -99,4 +99,4 @@ async function callSendAPI(senderPsid, messageText) {
 
 // ✅ Start Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Lorna AI running on port ${PORT}`));
+ap}`));
